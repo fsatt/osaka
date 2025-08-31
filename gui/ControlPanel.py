@@ -1,6 +1,7 @@
 import os
 
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
+from PyQt6.QtGui import QIcon
 from moviepy import VideoFileClip
 from moviepy.video.fx.Crop import Crop
 
@@ -53,9 +54,30 @@ class ControlPanel(QWidget):
         height_layout.addWidget(self.height_input)
         layout.addLayout(height_layout)
 
+        # Alignment buttons in horizontal layout
+        alignment_layout = QHBoxLayout()
+
+        self.align_vertical_button = QPushButton()
+        self.align_vertical_button.setIcon(QIcon("assets/icons/align_center_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.align_vertical_button.setToolTip("Center Vertically")
+        self.align_vertical_button.setFixedSize(24, 24)
+        self.align_vertical_button.clicked.connect(self.align_vertical)
+        alignment_layout.addWidget(self.align_vertical_button)
+        
+        self.align_horizontal_button = QPushButton()
+        self.align_horizontal_button.setIcon(QIcon("assets/icons/align_justify_center_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.align_horizontal_button.setToolTip("Center Horizontally")
+        self.align_horizontal_button.setFixedSize(24, 24)
+        self.align_horizontal_button.clicked.connect(self.align_horizontal)
+        alignment_layout.addWidget(self.align_horizontal_button)
+
+        
+        # Add the horizontal layout to the main vertical layout
+        layout.addLayout(alignment_layout)
+
         # Add some spacing
         layout.addStretch()
-
+        
         # Cropping button
         self.crop_button = QPushButton("Crop Video")
         self.crop_button.clicked.connect(self.start_crop_process)
@@ -208,3 +230,47 @@ class ControlPanel(QWidget):
             print("Please enter valid integer values for cropping coordinates.")
         except Exception as e:
             print(f"Error during video cropping: {e}")
+
+    def align_horizontal(self):
+        if not self.crop_box or not self.image_with_cropbox:
+            return
+            
+        try:
+            # Get current crop dimensions
+            current_width = int(self.width_input.text()) if self.width_input.text() else 100
+            current_height = int(self.height_input.text()) if self.height_input.text() else 100
+            current_y = int(self.y_input.text()) if self.y_input.text() else 0
+            
+            # Get original image dimensions
+            image_width = self.image_with_cropbox.pil_image.width
+            
+            # Calculate centered X position
+            centered_x = (image_width - current_width) // 2
+            
+            # Update the input fields
+            self.x_input.setText(str(centered_x))
+            
+        except ValueError:
+            print("Please enter valid dimensions before aligning")
+
+    def align_vertical(self):
+        if not self.crop_box or not self.image_with_cropbox:
+            return
+            
+        try:
+            # Get current crop dimensions
+            current_width = int(self.width_input.text()) if self.width_input.text() else 100
+            current_height = int(self.height_input.text()) if self.height_input.text() else 100
+            current_x = int(self.x_input.text()) if self.x_input.text() else 0
+            
+            # Get original image dimensions
+            image_height = self.image_with_cropbox.pil_image.height
+            
+            # Calculate centered Y position
+            centered_y = (image_height - current_height) // 2
+            
+            # Update the input fields
+            self.y_input.setText(str(centered_y))
+            
+        except ValueError:
+            print("Please enter valid dimensions before aligning")

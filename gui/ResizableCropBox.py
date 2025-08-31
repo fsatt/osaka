@@ -252,13 +252,9 @@ class ResizableCropBox(QWidget):
                 )
             )
             self.cropChanged.emit(orig_x, orig_y, orig_width, orig_height)
-            print(f"Crop (original): {orig_x}, {orig_y}, {orig_width}, {orig_height}")
         else:
             self.cropChanged.emit(
                 self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
-            )
-            print(
-                f"Crop (display): {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}"
             )
 
     def setCropRect(self, x, y, width, height, apply_constraints=True):
