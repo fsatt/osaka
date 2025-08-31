@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QPainter, QPixmap
 from PyQt6.QtCore import Qt, QRect, QSize
 from PIL.ImageQt import ImageQt
+
 from gui.ResizableCropBox import ResizableCropBox
 
 
@@ -25,9 +26,9 @@ class ImageWithCropBox(QWidget):
             # Give the crop box a reference to get image boundaries
             self.crop_box.get_image_bounds = lambda: self.image_area
             self.crop_box.show()
-            
+
             # Emit a signal or call parent method to connect the crop box signal
-            if hasattr(self.parent(), 'connect_crop_signals'):
+            if hasattr(self.parent(), "connect_crop_signals"):
                 self.parent().connect_crop_signals(self.crop_box)
 
     def paintEvent(self, event):
@@ -65,31 +66,31 @@ class ImageWithCropBox(QWidget):
     def display_to_original_coords(self, x, y, width, height):
         if self.image_area.isEmpty():
             return x, y, width, height
-            
+
         # Convert from display coordinates to original image coordinates
         scale_x = self.pil_image.width / self.image_area.width()
         scale_y = self.pil_image.height / self.image_area.height()
-        
+
         orig_x = int(x * scale_x)
         orig_y = int(y * scale_y)
         orig_width = int(width * scale_x)
         orig_height = int(height * scale_y)
-        
+
         return orig_x, orig_y, orig_width, orig_height
 
     def original_to_display_coords(self, orig_x, orig_y, orig_width, orig_height):
         if self.image_area.isEmpty():
             return orig_x, orig_y, orig_width, orig_height
-            
+
         # Convert from original image coordinates to display coordinates
         scale_x = self.image_area.width() / self.pil_image.width
         scale_y = self.image_area.height() / self.pil_image.height
-        
+
         x = int(orig_x * scale_x)
         y = int(orig_y * scale_y)
         width = int(orig_width * scale_x)
         height = int(orig_height * scale_y)
-        
+
         return x, y, width, height
 
     def resizeEvent(self, event):

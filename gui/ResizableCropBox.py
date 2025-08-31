@@ -6,7 +6,7 @@ from PyQt6.QtCore import Qt, QRect, pyqtSignal
 class ResizableCropBox(QWidget):
     # Signal to emit when crop rectangle changes
     cropChanged = pyqtSignal(int, int, int, int)  # x, y, width, height
-    
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
@@ -56,12 +56,12 @@ class ResizableCropBox(QWidget):
                 bounds = QRect(0, 0, self.parent().width(), self.parent().height())
         else:
             bounds = QRect(0, 0, self.parent().width(), self.parent().height())
-        
+
         return bounds
 
     def _constrain_movement(self, rect):
         bounds = self._get_bounds_rect()
-        
+
         # Ensure the rectangle stays within bounds
         if rect.left() < 0:
             rect.moveLeft(0)
@@ -71,15 +71,15 @@ class ResizableCropBox(QWidget):
             rect.moveRight(bounds.width() - 1)
         if rect.bottom() >= bounds.height():
             rect.moveBottom(bounds.height() - 1)
-        
+
         return rect
 
     def _constrain_resize(self, rect, min_width=20, min_height=20):
         bounds = self._get_bounds_rect()
-        
+
         # Normalize the rectangle to ensure positive dimensions
         rect = rect.normalized()
-        
+
         # Clamp to bounds with careful dimension calculations
         clamped_rect = QRect(
             max(0, rect.left()),
@@ -87,7 +87,7 @@ class ResizableCropBox(QWidget):
             min(rect.width(), bounds.width() - max(0, rect.left())),
             min(rect.height(), bounds.height() - max(0, rect.top())),
         )
-        
+
         # Ensure minimum dimensions
         if clamped_rect.width() >= min_width and clamped_rect.height() >= min_height:
             return clamped_rect
@@ -97,9 +97,14 @@ class ResizableCropBox(QWidget):
     def constrain_crop_rect(self, x, y, width, height, min_width=20, min_height=20):
         rect = QRect(x, y, width, height)
         constrained = self._constrain_resize(rect, min_width, min_height)
-        
+
         if constrained is not None:
-            return constrained.x(), constrained.y(), constrained.width(), constrained.height()
+            return (
+                constrained.x(),
+                constrained.y(),
+                constrained.width(),
+                constrained.height(),
+            )
         else:
             # Return current rect if the new one is invalid
             return self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
@@ -181,12 +186,16 @@ class ResizableCropBox(QWidget):
             if self.drag_handle == "move":
                 # For move operations, just translate without changing size
                 new_rect = self.rect.translated(delta)
-                
+
                 # Constrain movement to bounds using helper function
                 new_rect = self._constrain_movement(new_rect)
 
                 self.setCropRect(
-                    new_rect.x(), new_rect.y(), new_rect.width(), new_rect.height(), apply_constraints=False
+                    new_rect.x(),
+                    new_rect.y(),
+                    new_rect.width(),
+                    new_rect.height(),
+                    apply_constraints=False,
                 )
                 self.drag_position = event.pos()
 
@@ -230,28 +239,34 @@ class ResizableCropBox(QWidget):
                         constrained_rect.y(),
                         constrained_rect.width(),
                         constrained_rect.height(),
-                        apply_constraints=False
+                        apply_constraints=False,
                     )
                     self.drag_position = event.pos()
 
     def mouseReleaseEvent(self, event):
         self.drag_handle = None
         # Emit signal with original image coordinates if conversion is available
-        if hasattr(self.parent(), 'display_to_original_coords'):
-            orig_x, orig_y, orig_width, orig_height = self.parent().display_to_original_coords(
-                self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
+        if hasattr(self.parent(), "display_to_original_coords"):
+            orig_x, orig_y, orig_width, orig_height = (
+                self.parent().display_to_original_coords(
+                    self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
+                )
             )
             self.cropChanged.emit(orig_x, orig_y, orig_width, orig_height)
             print(f"Crop (original): {orig_x}, {orig_y}, {orig_width}, {orig_height}")
         else:
-            self.cropChanged.emit(self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height())
-            print(f"Crop (display): {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}")
+            self.cropChanged.emit(
+                self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
+            )
+            print(
+                f"Crop (display): {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}"
+            )
 
     def setCropRect(self, x, y, width, height, apply_constraints=True):
         if apply_constraints:
             # Apply constraints to the input coordinates
             x, y, width, height = self.constrain_crop_rect(x, y, width, height)
-        
+
         self.rect = QRect(x, y, width, height)
         self.float_rect[0] = float(x)
         self.float_rect[1] = float(y)

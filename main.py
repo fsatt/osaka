@@ -38,4 +38,4 @@ if __name__ == "__main__":
     # first_frame = get_first_frame(video_path)
     first_frame = "temp/first_frame.jpg"
 
-    run_gui(first_frame)
+    run_gui(first_frame, video_path)
