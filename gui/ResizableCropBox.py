@@ -1,9 +1,12 @@
 from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtCore import Qt, QRect, pyqtSignal
 
 
 class ResizableCropBox(QWidget):
+    # Signal to emit when crop rectangle changes
+    cropChanged = pyqtSignal(int, int, int, int)  # x, y, width, height
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setMouseTracking(True)
@@ -45,6 +48,61 @@ class ResizableCropBox(QWidget):
             self.rect = new_rect
 
         super().resizeEvent(event)
+
+    def _get_bounds_rect(self):
+        if hasattr(self, "get_image_bounds") and callable(self.get_image_bounds):
+            bounds = self.get_image_bounds()
+            if bounds.isEmpty():
+                bounds = QRect(0, 0, self.parent().width(), self.parent().height())
+        else:
+            bounds = QRect(0, 0, self.parent().width(), self.parent().height())
+        
+        return bounds
+
+    def _constrain_movement(self, rect):
+        bounds = self._get_bounds_rect()
+        
+        # Ensure the rectangle stays within bounds
+        if rect.left() < 0:
+            rect.moveLeft(0)
+        if rect.top() < 0:
+            rect.moveTop(0)
+        if rect.right() >= bounds.width():
+            rect.moveRight(bounds.width() - 1)
+        if rect.bottom() >= bounds.height():
+            rect.moveBottom(bounds.height() - 1)
+        
+        return rect
+
+    def _constrain_resize(self, rect, min_width=20, min_height=20):
+        bounds = self._get_bounds_rect()
+        
+        # Normalize the rectangle to ensure positive dimensions
+        rect = rect.normalized()
+        
+        # Clamp to bounds with careful dimension calculations
+        clamped_rect = QRect(
+            max(0, rect.left()),
+            max(0, rect.top()),
+            min(rect.width(), bounds.width() - max(0, rect.left())),
+            min(rect.height(), bounds.height() - max(0, rect.top())),
+        )
+        
+        # Ensure minimum dimensions
+        if clamped_rect.width() >= min_width and clamped_rect.height() >= min_height:
+            return clamped_rect
+        else:
+            return None  # Invalid rectangle
+
+    def constrain_crop_rect(self, x, y, width, height, min_width=20, min_height=20):
+        rect = QRect(x, y, width, height)
+        constrained = self._constrain_resize(rect, min_width, min_height)
+        
+        if constrained is not None:
+            return constrained.x(), constrained.y(), constrained.width(), constrained.height()
+        else:
+            # Return current rect if the new one is invalid
+            return self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -123,33 +181,12 @@ class ResizableCropBox(QWidget):
             if self.drag_handle == "move":
                 # For move operations, just translate without changing size
                 new_rect = self.rect.translated(delta)
-
-                # Constrain movement to bounds
-                if hasattr(self, "get_image_bounds") and callable(
-                    self.get_image_bounds
-                ):
-                    bounds = self.get_image_bounds()
-                    if bounds.isEmpty():
-                        bounds = QRect(
-                            0, 0, self.parent().width(), self.parent().height()
-                        )
-                else:
-                    bounds = QRect(0, 0, self.parent().width(), self.parent().height())
-
-                relative_bounds = QRect(0, 0, bounds.width(), bounds.height())
-
-                # Ensure the rectangle stays within bounds
-                if new_rect.left() < 0:
-                    new_rect.moveLeft(0)
-                if new_rect.top() < 0:
-                    new_rect.moveTop(0)
-                if new_rect.right() >= relative_bounds.width():
-                    new_rect.moveRight(relative_bounds.width() - 1)
-                if new_rect.bottom() >= relative_bounds.height():
-                    new_rect.moveBottom(relative_bounds.height() - 1)
+                
+                # Constrain movement to bounds using helper function
+                new_rect = self._constrain_movement(new_rect)
 
                 self.setCropRect(
-                    new_rect.x(), new_rect.y(), new_rect.width(), new_rect.height()
+                    new_rect.x(), new_rect.y(), new_rect.width(), new_rect.height(), apply_constraints=False
                 )
                 self.drag_position = event.pos()
 
@@ -183,51 +220,33 @@ class ResizableCropBox(QWidget):
                 # Normalize the rectangle to ensure positive dimensions
                 new_rect = new_rect.normalized()
 
-                # Constrain to parent bounds more carefully
-                if hasattr(self, "get_image_bounds") and callable(
-                    self.get_image_bounds
-                ):
-                    bounds = self.get_image_bounds()
-                    if bounds.isEmpty():
-                        bounds = QRect(
-                            0, 0, self.parent().width(), self.parent().height()
-                        )
-                else:
-                    bounds = QRect(0, 0, self.parent().width(), self.parent().height())
+                # Constrain to bounds using helper function
+                constrained_rect = self._constrain_resize(new_rect)
 
-                relative_bounds = QRect(0, 0, bounds.width(), bounds.height())
-
-                clamped_rect = QRect(
-                    max(0, new_rect.left()),
-                    max(0, new_rect.top()),
-                    min(
-                        new_rect.width(),
-                        relative_bounds.width() - max(0, new_rect.left()),
-                    ),
-                    min(
-                        new_rect.height(),
-                        relative_bounds.height() - max(0, new_rect.top()),
-                    ),
-                )
-
-                # Only update if the clamped rectangle is valid (positive dimensions)
-                if clamped_rect.width() > 20 and clamped_rect.height() > 20:
+                # Only update if the constrained rectangle is valid
+                if constrained_rect is not None:
                     self.setCropRect(
-                        clamped_rect.x(),
-                        clamped_rect.y(),
-                        clamped_rect.width(),
-                        clamped_rect.height(),
+                        constrained_rect.x(),
+                        constrained_rect.y(),
+                        constrained_rect.width(),
+                        constrained_rect.height(),
+                        apply_constraints=False
                     )
                     self.drag_position = event.pos()
 
     def mouseReleaseEvent(self, event):
         self.drag_handle = None
-        # You'll emit a signal here to update the QLineEdit widgets in the main GUI
+        # Emit signal to update the QLineEdit widgets in the main GUI
+        self.cropChanged.emit(self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height())
         print(
-            f"Final crop: {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}"
+            f"Crop: {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}"
         )
 
-    def setCropRect(self, x, y, width, height):
+    def setCropRect(self, x, y, width, height, apply_constraints=True):
+        if apply_constraints:
+            # Apply constraints to the input coordinates
+            x, y, width, height = self.constrain_crop_rect(x, y, width, height)
+        
         self.rect = QRect(x, y, width, height)
         self.float_rect[0] = float(x)
         self.float_rect[1] = float(y)

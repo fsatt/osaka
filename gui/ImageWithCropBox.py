@@ -25,6 +25,10 @@ class ImageWithCropBox(QWidget):
             # Give the crop box a reference to get image boundaries
             self.crop_box.get_image_bounds = lambda: self.image_area
             self.crop_box.show()
+            
+            # Emit a signal or call parent method to connect the crop box signal
+            if hasattr(self.parent(), 'connect_crop_signals'):
+                self.parent().connect_crop_signals(self.crop_box)
 
     def paintEvent(self, event):
         painter = QPainter(self)

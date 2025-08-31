@@ -60,6 +60,70 @@ class CropGUI(QWidget):
 
         self.setLayout(main_layout)
 
+    def connect_crop_signals(self, crop_box):
+        # Store reference to crop box
+        self.crop_box = crop_box
+        
+        # Connect crop box changes to input fields
+        crop_box.cropChanged.connect(self.update_crop_fields)
+        
+        # Connect input field changes to crop box
+        self.x_input.textChanged.connect(self.update_crop_from_fields)
+        self.y_input.textChanged.connect(self.update_crop_from_fields)
+        self.width_input.textChanged.connect(self.update_crop_from_fields)
+        self.height_input.textChanged.connect(self.update_crop_from_fields)
+        
+        # Initialize the input fields with current crop box values
+        self.update_crop_fields(crop_box.rect.x(), crop_box.rect.y(), crop_box.rect.width(), crop_box.rect.height())
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        # Connect the crop box signal after it's created
+        if hasattr(self.image_with_cropbox, 'crop_box') and self.image_with_cropbox.crop_box:
+            self.image_with_cropbox.crop_box.cropChanged.connect(self.update_crop_fields)
+
+    def update_crop_fields(self, x, y, width, height):
+        # Temporarily disconnect signals to avoid infinite loop
+        self.disconnect_input_signals()
+        
+        self.x_input.setText(str(x))
+        self.y_input.setText(str(y))
+        self.width_input.setText(str(width))
+        self.height_input.setText(str(height))
+        
+        # Reconnect signals
+        self.connect_input_signals()
+
+    def update_crop_from_fields(self):
+        """Update the crop box when input fields change"""
+        try:
+            x = int(self.x_input.text()) if self.x_input.text() else 0
+            y = int(self.y_input.text()) if self.y_input.text() else 0
+            width = int(self.width_input.text()) if self.width_input.text() else 100
+            height = int(self.height_input.text()) if self.height_input.text() else 100
+            
+            if hasattr(self, 'crop_box') and self.crop_box:
+                # Let the crop box handle all constraints (bounds, minimum dimensions, etc.)
+                self.crop_box.setCropRect(x, y, width, height, apply_constraints=True)
+                
+        except ValueError:
+            # Ignore invalid input temporarily
+            pass
+
+    def disconnect_input_signals(self):
+        if hasattr(self, 'crop_box'):
+            self.x_input.textChanged.disconnect()
+            self.y_input.textChanged.disconnect()
+            self.width_input.textChanged.disconnect()
+            self.height_input.textChanged.disconnect()
+
+    def connect_input_signals(self):
+        if hasattr(self, 'crop_box'):
+            self.x_input.textChanged.connect(self.update_crop_from_fields)
+            self.y_input.textChanged.connect(self.update_crop_from_fields)
+            self.width_input.textChanged.connect(self.update_crop_from_fields)
+            self.height_input.textChanged.connect(self.update_crop_from_fields)
+
     def start_crop_process(self):
         try:
             x = int(self.x_input.text())
