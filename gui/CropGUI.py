@@ -29,36 +29,66 @@ class CropGUI(QWidget):
         self.setGeometry(100, 100, 800, 600)
         self.setMinimumSize(200, 200)
 
-        # Main layout
-        main_layout = QVBoxLayout()
+        # Main horizontal layout
+        main_layout = QHBoxLayout()
 
         # Image with crop box widget
         self.image_with_cropbox = ImageWithCropBox(self.image, self)
         main_layout.addWidget(self.image_with_cropbox)
 
-        # Input fields for coordinates
-        input_layout = QHBoxLayout()
+        # Right panel for controls
+        controls_layout = QVBoxLayout()
+        controls_layout.setSpacing(10)
 
+        # Create a widget to contain the controls and set max width
+        controls_widget = QWidget()
+        controls_widget.setLayout(controls_layout)
+        controls_widget.setMaximumWidth(150)
+
+        # Input fields for coordinates in a vertical layout
         self.x_input = QLineEdit()
         self.y_input = QLineEdit()
         self.width_input = QLineEdit()
         self.height_input = QLineEdit()
 
-        input_layout.addWidget(QLabel("X:"))
-        input_layout.addWidget(self.x_input)
-        input_layout.addWidget(QLabel("Y:"))
-        input_layout.addWidget(self.y_input)
-        input_layout.addWidget(QLabel("Width:"))
-        input_layout.addWidget(self.width_input)
-        input_layout.addWidget(QLabel("Height:"))
-        input_layout.addWidget(self.height_input)
+        # Set fixed width for input fields
+        input_width = 80
+        self.x_input.setFixedWidth(input_width)
+        self.y_input.setFixedWidth(input_width)
+        self.width_input.setFixedWidth(input_width)
+        self.height_input.setFixedWidth(input_width)
 
-        main_layout.addLayout(input_layout)
+        # Add input fields with labels vertically
+        x_layout = QHBoxLayout()
+        x_layout.addWidget(QLabel("X:"))
+        x_layout.addWidget(self.x_input)
+        controls_layout.addLayout(x_layout)
+
+        y_layout = QHBoxLayout()
+        y_layout.addWidget(QLabel("Y:"))
+        y_layout.addWidget(self.y_input)
+        controls_layout.addLayout(y_layout)
+
+        width_layout = QHBoxLayout()
+        width_layout.addWidget(QLabel("Width:"))
+        width_layout.addWidget(self.width_input)
+        controls_layout.addLayout(width_layout)
+
+        height_layout = QHBoxLayout()
+        height_layout.addWidget(QLabel("Height:"))
+        height_layout.addWidget(self.height_input)
+        controls_layout.addLayout(height_layout)
+
+        # Add some spacing
+        controls_layout.addStretch()
 
         # Cropping button
         self.crop_button = QPushButton("Crop Video")
         self.crop_button.clicked.connect(self.start_crop_process)
-        main_layout.addWidget(self.crop_button)
+        controls_layout.addWidget(self.crop_button)
+
+        # Add controls panel to main layout
+        main_layout.addWidget(controls_widget)
 
         self.setLayout(main_layout)
 
