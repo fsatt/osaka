@@ -105,7 +105,6 @@ class ImageWithCropBox(QWidget):
         return QSize(int(base_height * aspect_ratio), base_height)
 
     def get_crop_coordinates(self):
-        """Return crop coordinates in original image dimensions"""
         if not self.crop_box or self.image_area.isEmpty():
             return (0, 0, 100, 100)
 

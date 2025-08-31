@@ -21,7 +21,6 @@ class ResizableCropBox(QWidget):
         self.previous_size = self.size()
 
     def resizeEvent(self, event):
-        """Scale the crop rectangle proportionally when the widget is resized"""
         old_size = event.oldSize()
         new_size = event.size()
 
