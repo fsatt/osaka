@@ -95,19 +95,24 @@ class CropGUI(QWidget):
         self.connect_input_signals()
 
     def update_crop_from_fields(self):
-        """Update the crop box when input fields change"""
         try:
-            x = int(self.x_input.text()) if self.x_input.text() else 0
-            y = int(self.y_input.text()) if self.y_input.text() else 0
-            width = int(self.width_input.text()) if self.width_input.text() else 100
-            height = int(self.height_input.text()) if self.height_input.text() else 100
+            orig_x = int(self.x_input.text()) if self.x_input.text() else 0
+            orig_y = int(self.y_input.text()) if self.y_input.text() else 0
+            orig_width = int(self.width_input.text()) if self.width_input.text() else 100
+            orig_height = int(self.height_input.text()) if self.height_input.text() else 100
             
             if hasattr(self, 'crop_box') and self.crop_box:
-                # Let the crop box handle all constraints (bounds, minimum dimensions, etc.)
+                # Convert from original image coordinates to display coordinates
+                if hasattr(self.image_with_cropbox, 'original_to_display_coords'):
+                    x, y, width, height = self.image_with_cropbox.original_to_display_coords(
+                        orig_x, orig_y, orig_width, orig_height
+                    )
+                else:
+                    x, y, width, height = orig_x, orig_y, orig_width, orig_height
+                
                 self.crop_box.setCropRect(x, y, width, height, apply_constraints=True)
                 
         except ValueError:
-            # Ignore invalid input temporarily
             pass
 
     def disconnect_input_signals(self):

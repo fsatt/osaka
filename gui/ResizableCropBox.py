@@ -236,11 +236,16 @@ class ResizableCropBox(QWidget):
 
     def mouseReleaseEvent(self, event):
         self.drag_handle = None
-        # Emit signal to update the QLineEdit widgets in the main GUI
-        self.cropChanged.emit(self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height())
-        print(
-            f"Crop: {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}"
-        )
+        # Emit signal with original image coordinates if conversion is available
+        if hasattr(self.parent(), 'display_to_original_coords'):
+            orig_x, orig_y, orig_width, orig_height = self.parent().display_to_original_coords(
+                self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
+            )
+            self.cropChanged.emit(orig_x, orig_y, orig_width, orig_height)
+            print(f"Crop (original): {orig_x}, {orig_y}, {orig_width}, {orig_height}")
+        else:
+            self.cropChanged.emit(self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height())
+            print(f"Crop (display): {self.rect.x()}, {self.rect.y()}, {self.rect.width()}, {self.rect.height()}")
 
     def setCropRect(self, x, y, width, height, apply_constraints=True):
         if apply_constraints:

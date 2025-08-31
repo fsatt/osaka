@@ -62,6 +62,36 @@ class ImageWithCropBox(QWidget):
         if self.crop_box:
             self.crop_box.setGeometry(self.image_area)
 
+    def display_to_original_coords(self, x, y, width, height):
+        if self.image_area.isEmpty():
+            return x, y, width, height
+            
+        # Convert from display coordinates to original image coordinates
+        scale_x = self.pil_image.width / self.image_area.width()
+        scale_y = self.pil_image.height / self.image_area.height()
+        
+        orig_x = int(x * scale_x)
+        orig_y = int(y * scale_y)
+        orig_width = int(width * scale_x)
+        orig_height = int(height * scale_y)
+        
+        return orig_x, orig_y, orig_width, orig_height
+
+    def original_to_display_coords(self, orig_x, orig_y, orig_width, orig_height):
+        if self.image_area.isEmpty():
+            return orig_x, orig_y, orig_width, orig_height
+            
+        # Convert from original image coordinates to display coordinates
+        scale_x = self.image_area.width() / self.pil_image.width
+        scale_y = self.image_area.height() / self.pil_image.height
+        
+        x = int(orig_x * scale_x)
+        y = int(orig_y * scale_y)
+        width = int(orig_width * scale_x)
+        height = int(orig_height * scale_y)
+        
+        return x, y, width, height
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update()  # Trigger paintEvent to recalculate image area
