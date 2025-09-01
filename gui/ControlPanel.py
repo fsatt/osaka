@@ -195,22 +195,48 @@ class ControlPanel(QWidget):
         self.width_input.valueChanged.connect(self.update_crop_from_fields)
         self.height_input.valueChanged.connect(self.update_crop_from_fields)
 
-        # Initialize the input fields with current crop box values
-        self.update_crop_fields(
-            crop_box.rect.x(),
-            crop_box.rect.y(),
-            crop_box.rect.width(),
-            crop_box.rect.height(),
-        )
+        # Initialize the input fields with current crop box values converted to original coordinates
+        # Use a small delay to ensure the image area is properly calculated
+        from PyQt6.QtCore import QTimer
+        def initialize_fields():
+            if hasattr(image_with_cropbox, 'display_to_original_coords') and not image_with_cropbox.image_area.isEmpty():
+                try:
+                    orig_x, orig_y, orig_width, orig_height = image_with_cropbox.display_to_original_coords(
+                        crop_box.rect.x(),
+                        crop_box.rect.y(),
+                        crop_box.rect.width(),
+                        crop_box.rect.height(),
+                    )
+                    self.update_crop_fields(orig_x, orig_y, orig_width, orig_height)
+                except:
+                    # Fallback to direct values if conversion fails
+                    self.update_crop_fields(
+                        crop_box.rect.x(),
+                        crop_box.rect.y(),
+                        crop_box.rect.width(),
+                        crop_box.rect.height(),
+                    )
+            else:
+                self.update_crop_fields(
+                    crop_box.rect.x(),
+                    crop_box.rect.y(),
+                    crop_box.rect.width(),
+                    crop_box.rect.height(),
+                )
+        
+        # Try immediately, then with a small delay if needed
+        initialize_fields()
+        QTimer.singleShot(100, initialize_fields)  # Retry after 100ms to ensure proper sizing
 
     def update_crop_fields(self, x, y, width, height):
         # Temporarily disconnect signals to avoid infinite loop
         self.disconnect_input_signals()
 
-        self.x_input.setValue(int(x))
-        self.y_input.setValue(int(y))
-        self.width_input.setValue(int(width))
-        self.height_input.setValue(int(height))
+        # Ensure we have integer values for the spinboxes
+        self.x_input.setValue(int(round(x)))
+        self.y_input.setValue(int(round(y))) 
+        self.width_input.setValue(int(round(width)))
+        self.height_input.setValue(int(round(height)))
 
         # Reconnect signals
         self.connect_input_signals()
