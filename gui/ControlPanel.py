@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QRadioButton
 from PyQt6.QtGui import QIcon
 from moviepy import VideoFileClip
 from moviepy.video.fx.Crop import Crop
@@ -60,24 +60,62 @@ class ControlPanel(QWidget):
         self.align_vertical_button = QPushButton()
         self.align_vertical_button.setIcon(QIcon("assets/icons/align_center_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
         self.align_vertical_button.setToolTip("Center Vertically")
-        self.align_vertical_button.setFixedSize(24, 24)
+        self.align_vertical_button.setFixedSize(28, 28)
         self.align_vertical_button.clicked.connect(self.align_vertical)
         alignment_layout.addWidget(self.align_vertical_button)
         
         self.align_horizontal_button = QPushButton()
         self.align_horizontal_button.setIcon(QIcon("assets/icons/align_justify_center_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
         self.align_horizontal_button.setToolTip("Center Horizontally")
-        self.align_horizontal_button.setFixedSize(24, 24)
+        self.align_horizontal_button.setFixedSize(28, 28)
         self.align_horizontal_button.clicked.connect(self.align_horizontal)
         alignment_layout.addWidget(self.align_horizontal_button)
 
         
         # Add the horizontal layout to the main vertical layout
         layout.addLayout(alignment_layout)
+        
+        # Portrait/Landscape switch for ratios that can be flipped
+        orientation_layout = QHBoxLayout()
+        
+        self.orientation_portrait = QPushButton()
+        self.orientation_portrait.setIcon(QIcon("assets/icons/crop_portrait_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.orientation_portrait.setCheckable(True)
+        self.orientation_portrait.setChecked(True)  # Default to portrait
+        self.orientation_portrait.setToolTip("Portrait orientation")
+        self.orientation_portrait.setFixedSize(28, 28)
+        self.orientation_portrait.clicked.connect(lambda: self.on_orientation_button_clicked('portrait'))
+        orientation_layout.addWidget(self.orientation_portrait)
+
+        self.orientation_landscape = QPushButton()
+        self.orientation_landscape.setIcon(QIcon("assets/icons/crop_landscape_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.orientation_landscape.setCheckable(True)
+        self.orientation_landscape.setToolTip("Landscape orientation")
+        self.orientation_landscape.setFixedSize(28, 28)
+        self.orientation_landscape.clicked.connect(lambda: self.on_orientation_button_clicked('landscape'))
+        orientation_layout.addWidget(self.orientation_landscape)
+
+        layout.addLayout(orientation_layout)
+
+        # Aspect Ratio Controls
+        aspect_layout = QHBoxLayout()
+        
+        # Create aspect ratio icon label
+        aspect_icon_label = QLabel()
+        aspect_icon = QIcon("assets/icons/aspect_ratio_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
+        aspect_icon_label.setPixmap(aspect_icon.pixmap(20, 20))
+        aspect_icon_label.setToolTip("Aspect Ratio")
+        aspect_layout.addWidget(aspect_icon_label)
+        
+        self.aspect_ratio_combo = QComboBox()
+        self.aspect_ratio_combo.addItems(["Custom", "Original", "1:1", "3:4", "9:16"])
+        self.aspect_ratio_combo.currentTextChanged.connect(self.on_aspect_ratio_changed)
+        aspect_layout.addWidget(self.aspect_ratio_combo)
+        layout.addLayout(aspect_layout)
 
         # Add some spacing
         layout.addStretch()
-        
+
         # Cropping button
         self.crop_button = QPushButton("Crop Video")
         self.crop_button.clicked.connect(self.start_crop_process)
@@ -238,8 +276,6 @@ class ControlPanel(QWidget):
         try:
             # Get current crop dimensions
             current_width = int(self.width_input.text()) if self.width_input.text() else 100
-            current_height = int(self.height_input.text()) if self.height_input.text() else 100
-            current_y = int(self.y_input.text()) if self.y_input.text() else 0
             
             # Get original image dimensions
             image_width = self.image_with_cropbox.pil_image.width
@@ -259,9 +295,7 @@ class ControlPanel(QWidget):
             
         try:
             # Get current crop dimensions
-            current_width = int(self.width_input.text()) if self.width_input.text() else 100
             current_height = int(self.height_input.text()) if self.height_input.text() else 100
-            current_x = int(self.x_input.text()) if self.x_input.text() else 0
             
             # Get original image dimensions
             image_height = self.image_with_cropbox.pil_image.height
@@ -274,3 +308,90 @@ class ControlPanel(QWidget):
             
         except ValueError:
             print("Please enter valid dimensions before aligning")
+
+    def on_orientation_button_clicked(self, orientation):
+        if orientation == 'portrait':
+            # Ensure portrait is checked and landscape is unchecked
+            self.orientation_portrait.setChecked(True)
+            self.orientation_landscape.setChecked(False)
+        else:  # landscape
+            # Ensure landscape is checked and portrait is unchecked
+            self.orientation_landscape.setChecked(True)
+            self.orientation_portrait.setChecked(False)
+        
+        # Trigger aspect ratio recalculation
+        self.on_orientation_changed()
+
+    def on_orientation_changed(self):
+        current_ratio = self.aspect_ratio_combo.currentText()
+        if current_ratio in ["3:4", "9:16"]:
+            self.on_aspect_ratio_changed(current_ratio)
+
+    def on_aspect_ratio_changed(self, ratio_text):
+        if not self.crop_box or not self.image_with_cropbox:
+            return
+            
+        if ratio_text == "Custom":
+            # No constraints
+            return
+        
+        # Get current crop dimensions
+        current_width = int(self.width_input.text()) if self.width_input.text() else 100
+        current_height = int(self.height_input.text()) if self.height_input.text() else 100
+        
+        # Calculate new dimensions based on aspect ratio
+        new_width, new_height = self.calculate_aspect_ratio_dimensions(ratio_text, current_width, current_height)
+        
+        # Center the crop box
+        image_width = self.image_with_cropbox.pil_image.width
+        image_height = self.image_with_cropbox.pil_image.height
+        
+        new_x = (image_width - new_width) // 2
+        new_y = (image_height - new_height) // 2
+        
+        # Update input fields
+        self.x_input.setText(str(new_x))
+        self.y_input.setText(str(new_y))
+        self.width_input.setText(str(new_width))
+        self.height_input.setText(str(new_height))
+
+    def calculate_aspect_ratio_dimensions(self, ratio_text, current_width, current_height):
+        if not self.image_with_cropbox:
+            return current_width, current_height
+            
+        image_width = self.image_with_cropbox.pil_image.width
+        image_height = self.image_with_cropbox.pil_image.height
+        
+        if ratio_text == "Original":
+            # Use original image aspect ratio
+            aspect_ratio = image_width / image_height
+        elif ratio_text == "1:1":
+            aspect_ratio = 1.0
+        elif ratio_text == "3:4":
+            if self.orientation_portrait.isChecked():  # Portrait
+                aspect_ratio = 3.0 / 4.0
+            else:  # Landscape
+                aspect_ratio = 4.0 / 3.0
+        elif ratio_text == "9:16":
+            if self.orientation_portrait.isChecked():  # Portrait
+                aspect_ratio = 9.0 / 16.0
+            else:  # Landscape
+                aspect_ratio = 16.0 / 9.0
+        else:
+            return current_width, current_height
+        
+        # Calculate dimensions that fit within the image and maximize area
+        if aspect_ratio >= 1:  # Wide aspect ratio
+            # Width-limited
+            new_width = min(image_width, int(image_height * aspect_ratio))
+            new_height = int(new_width / aspect_ratio)
+        else:  # Tall aspect ratio
+            # Height-limited
+            new_height = min(image_height, int(image_width / aspect_ratio))
+            new_width = int(new_height * aspect_ratio)
+        
+        # Ensure dimensions don't exceed image bounds
+        new_width = min(new_width, image_width)
+        new_height = min(new_height, image_height)
+        
+        return new_width, new_height
