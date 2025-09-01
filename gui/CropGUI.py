@@ -31,14 +31,13 @@ class CropGUI(QWidget):
 
         # Control panel
         self.control_panel = ControlPanel(
-            video_path=self.video_path,
-            output_path=self.output_path
+            video_path=self.video_path, output_path=self.output_path
         )
         # Connect the control panel to the image widget
         self.control_panel.set_image_widget(self.image_with_cropbox)
         main_layout.addWidget(self.control_panel)
-        
+
         self.setLayout(main_layout)
-    
+
     def connect_crop_signals(self, crop_box):
         self.control_panel.connect_crop_signals(crop_box, self.image_with_cropbox)

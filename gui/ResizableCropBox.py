@@ -139,7 +139,6 @@ class ResizableCropBox(QWidget):
             bounds.adjust(0, 0, -1, -1)  # Adjust bounds to prevent overflow
 
             if self.drag_handle == "move":
-                
                 # For move operations, just translate without changing size
                 new_rect = self.drag_rect_initial.translated(big_delta)
 
@@ -167,108 +166,144 @@ class ResizableCropBox(QWidget):
                 if self.aspect_ratio is None:
                     # Handle free resize (no aspect ratio lock) with proper bounds checking
                     new_rect = QRect(self.rect)
-                    
+
                     # Calculate new edges based on which handle is being dragged
                     if self.drag_handle in ["top_left", "top_right"]:
                         # Adjust top edge
                         new_top = self.drag_rect_initial.top() + big_delta.y()
                         # Ensure we don't go above 0 or below min_height from bottom
-                        new_top = max(0, min(new_top, self.drag_rect_initial.bottom() - self.min_height))
+                        new_top = max(
+                            0,
+                            min(
+                                new_top,
+                                self.drag_rect_initial.bottom() - self.min_height,
+                            ),
+                        )
                         new_rect.setTop(new_top)
-                    
+
                     if self.drag_handle in ["bottom_left", "bottom_right"]:
                         # Adjust bottom edge
                         new_bottom = self.drag_rect_initial.bottom() + big_delta.y()
                         # Ensure we don't go below bounds or above min_height from top
-                        new_bottom = min(bounds.height(), max(new_bottom, self.drag_rect_initial.top() + self.min_height))
+                        new_bottom = min(
+                            bounds.height(),
+                            max(
+                                new_bottom,
+                                self.drag_rect_initial.top() + self.min_height,
+                            ),
+                        )
                         new_rect.setBottom(new_bottom)
-                    
+
                     if self.drag_handle in ["top_left", "bottom_left"]:
                         # Adjust left edge
                         new_left = self.drag_rect_initial.left() + big_delta.x()
                         # Ensure we don't go left of 0 or right of min_width from right edge
-                        new_left = max(0, min(new_left, self.drag_rect_initial.right() - self.min_width))
+                        new_left = max(
+                            0,
+                            min(
+                                new_left,
+                                self.drag_rect_initial.right() - self.min_width,
+                            ),
+                        )
                         new_rect.setLeft(new_left)
-                    
+
                     if self.drag_handle in ["top_right", "bottom_right"]:
                         # Adjust right edge
                         new_right = self.drag_rect_initial.right() + big_delta.x()
                         # Ensure we don't go right of bounds or left of min_width from left edge
-                        new_right = min(bounds.width(), max(new_right, self.drag_rect_initial.left() + self.min_width))
+                        new_right = min(
+                            bounds.width(),
+                            max(
+                                new_right,
+                                self.drag_rect_initial.left() + self.min_width,
+                            ),
+                        )
                         new_rect.setRight(new_right)
 
-                else: # we need to lock aspect ratio
+                else:  # we need to lock aspect ratio
                     bounds.adjust(0, 0, 1, 1)
                     # Calculate the maximum possible dimensions based on mouse movement and bounds
                     potential_width = self.drag_rect_initial.width()
                     potential_height = self.drag_rect_initial.height()
-                    
+
                     # Adjust based on which handle is being dragged, considering bounds
                     if self.drag_handle == "top_left":
                         # Width is limited by how far left we can go (to 0) and mouse movement
-                        max_width_expansion = self.drag_rect_initial.left()  # can't go past left edge
+                        max_width_expansion = (
+                            self.drag_rect_initial.left()
+                        )  # can't go past left edge
                         potential_width = min(
                             self.drag_rect_initial.width() - big_delta.x(),
-                            self.drag_rect_initial.width() + max_width_expansion
+                            self.drag_rect_initial.width() + max_width_expansion,
                         )
-                        # Height is limited by how far up we can go (to 0) and mouse movement  
-                        max_height_expansion = self.drag_rect_initial.top()  # can't go past top edge
+                        # Height is limited by how far up we can go (to 0) and mouse movement
+                        max_height_expansion = (
+                            self.drag_rect_initial.top()
+                        )  # can't go past top edge
                         potential_height = min(
                             self.drag_rect_initial.height() - big_delta.y(),
-                            self.drag_rect_initial.height() + max_height_expansion
+                            self.drag_rect_initial.height() + max_height_expansion,
                         )
                     elif self.drag_handle == "top_right":
                         # Width is limited by right boundary and mouse movement
-                        max_width_available = bounds.width() - self.drag_rect_initial.left()
+                        max_width_available = (
+                            bounds.width() - self.drag_rect_initial.left()
+                        )
                         potential_width = min(
                             self.drag_rect_initial.width() + big_delta.x(),
-                            max_width_available
+                            max_width_available,
                         )
                         # Height is limited by top boundary
                         max_height_expansion = self.drag_rect_initial.top()
                         potential_height = min(
                             self.drag_rect_initial.height() - big_delta.y(),
-                            self.drag_rect_initial.height() + max_height_expansion
+                            self.drag_rect_initial.height() + max_height_expansion,
                         )
                     elif self.drag_handle == "bottom_left":
                         # Width is limited by left boundary
                         max_width_expansion = self.drag_rect_initial.left()
                         potential_width = min(
                             self.drag_rect_initial.width() - big_delta.x(),
-                            self.drag_rect_initial.width() + max_width_expansion
+                            self.drag_rect_initial.width() + max_width_expansion,
                         )
                         # Height is limited by bottom boundary and mouse movement
-                        max_height_available = bounds.height() - self.drag_rect_initial.top()
+                        max_height_available = (
+                            bounds.height() - self.drag_rect_initial.top()
+                        )
                         potential_height = min(
                             self.drag_rect_initial.height() + big_delta.y(),
-                            max_height_available
+                            max_height_available,
                         )
                     elif self.drag_handle == "bottom_right":
                         # Width is limited by right boundary
-                        max_width_available = bounds.width() - self.drag_rect_initial.left()
+                        max_width_available = (
+                            bounds.width() - self.drag_rect_initial.left()
+                        )
                         potential_width = min(
                             self.drag_rect_initial.width() + big_delta.x(),
-                            max_width_available
+                            max_width_available,
                         )
                         # Height is limited by bottom boundary
-                        max_height_available = bounds.height() - self.drag_rect_initial.top()
+                        max_height_available = (
+                            bounds.height() - self.drag_rect_initial.top()
+                        )
                         potential_height = min(
                             self.drag_rect_initial.height() + big_delta.y(),
-                            max_height_available
+                            max_height_available,
                         )
-                    
+
                     # Ensure we don't go below minimums
                     potential_width = max(potential_width, self.min_width)
                     potential_height = max(potential_height, self.min_height)
-                    
+
                     # Determine which dimension to constrain based on aspect ratio
                     # Use the dimension that results in a smaller overall size
                     width_constrained = potential_width
                     height_from_width = potential_width / self.aspect_ratio
-                    
+
                     height_constrained = potential_height
                     width_from_height = potential_height * self.aspect_ratio
-                    
+
                     # Choose the constraint that results in staying within bounds and aspect ratio
                     if height_from_width <= potential_height:
                         # Width is the limiting factor
@@ -278,7 +313,7 @@ class ResizableCropBox(QWidget):
                         # Height is the limiting factor
                         new_width = width_from_height
                         new_height = potential_height
-                    
+
                     # Ensure minimum dimensions (and recalculate if needed)
                     if new_width < self.min_width:
                         new_width = self.min_width
@@ -286,35 +321,35 @@ class ResizableCropBox(QWidget):
                     if new_height < self.min_height:
                         new_height = self.min_height
                         new_width = new_height * self.aspect_ratio
-                    
+
                     # Position the new rectangle based on which handle is being dragged
                     if self.drag_handle == "top_left":
                         new_rect = QRect(
                             self.drag_rect_initial.right() - int(new_width) + 1,
                             self.drag_rect_initial.bottom() - int(new_height) + 1,
                             int(new_width),
-                            int(new_height)
+                            int(new_height),
                         )
                     elif self.drag_handle == "top_right":
                         new_rect = QRect(
                             self.drag_rect_initial.left(),
                             self.drag_rect_initial.bottom() - int(new_height) + 1,
                             int(new_width),
-                            int(new_height)
+                            int(new_height),
                         )
                     elif self.drag_handle == "bottom_left":
                         new_rect = QRect(
                             self.drag_rect_initial.right() - int(new_width) + 1,
                             self.drag_rect_initial.top(),
                             int(new_width),
-                            int(new_height)
+                            int(new_height),
                         )
                     elif self.drag_handle == "bottom_right":
                         new_rect = QRect(
                             self.drag_rect_initial.left(),
                             self.drag_rect_initial.top(),
                             int(new_width),
-                            int(new_height)
+                            int(new_height),
                         )
 
                 self.setCropRect(
