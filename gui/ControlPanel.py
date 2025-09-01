@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QRadioButton
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QSpinBox
 from PyQt6.QtGui import QIcon
 from moviepy import VideoFileClip
 from moviepy.video.fx.Crop import Crop
@@ -21,10 +21,17 @@ class ControlPanel(QWidget):
         layout.setSpacing(10)
 
         # Input fields for coordinates
-        self.x_input = QLineEdit()
-        self.y_input = QLineEdit()
-        self.width_input = QLineEdit()
-        self.height_input = QLineEdit()
+        self.x_input = QSpinBox()
+        self.x_input.setRange(0, 9999)  # Will be updated when image is set
+        
+        self.y_input = QSpinBox()
+        self.y_input.setRange(0, 9999)  # Will be updated when image is set
+        
+        self.width_input = QSpinBox()
+        self.width_input.setRange(1, 9999)  # Minimum 1 pixel width
+        
+        self.height_input = QSpinBox()
+        self.height_input.setRange(1, 9999)  # Minimum 1 pixel height
 
         # Set fixed width for input fields
         input_width = 80
@@ -35,27 +42,36 @@ class ControlPanel(QWidget):
 
         # Add input fields with labels vertically
         x_layout = QHBoxLayout()
-        x_layout.addWidget(QLabel("X:"))
+        x_layout.addWidget(QLabel(" x"))
         x_layout.addWidget(self.x_input)
         layout.addLayout(x_layout)
 
         y_layout = QHBoxLayout()
-        y_layout.addWidget(QLabel("Y:"))
+        y_layout.addWidget(QLabel(" y"))
         y_layout.addWidget(self.y_input)
         layout.addLayout(y_layout)
 
         width_layout = QHBoxLayout()
-        width_layout.addWidget(QLabel("Width:"))
+        width_icon_label = QLabel()
+        width_icon = QIcon("assets/icons/arrow_range_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
+        width_icon_label.setPixmap(width_icon.pixmap(14, 14))
+        width_icon_label.setToolTip("Width")
+        width_layout.addWidget(width_icon_label)
         width_layout.addWidget(self.width_input)
         layout.addLayout(width_layout)
 
         height_layout = QHBoxLayout()
-        height_layout.addWidget(QLabel("Height:"))
+        height_icon_label = QLabel()
+        height_icon = QIcon("assets/icons/height_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
+        height_icon_label.setPixmap(height_icon.pixmap(14, 14))
+        height_icon_label.setToolTip("Height")
+        height_layout.addWidget(height_icon_label)
         height_layout.addWidget(self.height_input)
         layout.addLayout(height_layout)
 
         # Alignment buttons in horizontal layout
         alignment_layout = QHBoxLayout()
+        alignment_layout.addStretch()
 
         self.align_vertical_button = QPushButton()
         self.align_vertical_button.setIcon(QIcon("assets/icons/align_center_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
@@ -77,6 +93,7 @@ class ControlPanel(QWidget):
         
         # Portrait/Landscape switch for ratios that can be flipped
         orientation_layout = QHBoxLayout()
+        orientation_layout.addStretch()
         
         self.orientation_portrait = QPushButton()
         self.orientation_portrait.setIcon(QIcon("assets/icons/crop_portrait_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
@@ -108,6 +125,7 @@ class ControlPanel(QWidget):
         aspect_layout.addWidget(aspect_icon_label)
         
         self.aspect_ratio_combo = QComboBox()
+        self.aspect_ratio_combo.setFixedWidth(input_width)
         self.aspect_ratio_combo.addItems(["Custom", "Original", "1:1", "3:4", "9:16"])
         self.aspect_ratio_combo.currentTextChanged.connect(self.on_aspect_ratio_changed)
         aspect_layout.addWidget(self.aspect_ratio_combo)
@@ -117,12 +135,13 @@ class ControlPanel(QWidget):
         layout.addStretch()
 
         # Cropping button
-        self.crop_button = QPushButton("Crop Video")
+        self.crop_button = QPushButton(" Crop Video")
+        self.crop_button.setIcon(QIcon("assets/icons/crop_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
         self.crop_button.clicked.connect(self.start_crop_process)
         layout.addWidget(self.crop_button)
 
         # Set max width for the panel
-        self.setMaximumWidth(150)
+        self.setMaximumWidth(130)
         self.setLayout(layout)
 
     def set_image_widget(self, image_with_cropbox):
@@ -145,6 +164,22 @@ class ControlPanel(QWidget):
                 timer.stop()
             ) if hasattr(image_with_cropbox, 'crop_box') and image_with_cropbox.crop_box else None)
             timer.start(100)  # Check every 100ms until crop box is ready
+            
+        # Update spinbox ranges based on image dimensions
+        self.update_spinbox_ranges(image_with_cropbox)
+
+    def update_spinbox_ranges(self, image_with_cropbox):
+        if hasattr(image_with_cropbox, 'pil_image') and image_with_cropbox.pil_image:
+            image_width = image_with_cropbox.pil_image.width
+            image_height = image_with_cropbox.pil_image.height
+            
+            # Update X and Width ranges
+            self.x_input.setRange(0, image_width)
+            self.width_input.setRange(1, image_width)
+            
+            # Update Y and Height ranges  
+            self.y_input.setRange(0, image_height)
+            self.height_input.setRange(1, image_height)
 
     def connect_crop_signals(self, crop_box, image_with_cropbox):
         # Store references
@@ -155,10 +190,10 @@ class ControlPanel(QWidget):
         crop_box.cropChanged.connect(self.update_crop_fields)
 
         # Connect input field changes to crop box
-        self.x_input.textChanged.connect(self.update_crop_from_fields)
-        self.y_input.textChanged.connect(self.update_crop_from_fields)
-        self.width_input.textChanged.connect(self.update_crop_from_fields)
-        self.height_input.textChanged.connect(self.update_crop_from_fields)
+        self.x_input.valueChanged.connect(self.update_crop_from_fields)
+        self.y_input.valueChanged.connect(self.update_crop_from_fields)
+        self.width_input.valueChanged.connect(self.update_crop_from_fields)
+        self.height_input.valueChanged.connect(self.update_crop_from_fields)
 
         # Initialize the input fields with current crop box values
         self.update_crop_fields(
@@ -172,55 +207,108 @@ class ControlPanel(QWidget):
         # Temporarily disconnect signals to avoid infinite loop
         self.disconnect_input_signals()
 
-        self.x_input.setText(str(x))
-        self.y_input.setText(str(y))
-        self.width_input.setText(str(width))
-        self.height_input.setText(str(height))
+        self.x_input.setValue(int(x))
+        self.y_input.setValue(int(y))
+        self.width_input.setValue(int(width))
+        self.height_input.setValue(int(height))
 
         # Reconnect signals
         self.connect_input_signals()
 
     def update_crop_from_fields(self):
         try:
-            orig_x = int(self.x_input.text()) if self.x_input.text() else 0
-            orig_y = int(self.y_input.text()) if self.y_input.text() else 0
-            orig_width = int(self.width_input.text()) if self.width_input.text() else 100
-            orig_height = int(self.height_input.text()) if self.height_input.text() else 100
+            orig_x = self.x_input.value()
+            orig_y = self.y_input.value()
+            orig_width = self.width_input.value()
+            orig_height = self.height_input.value()
+
+            # Apply boundary constraints and get adjusted values
+            adjusted_x, adjusted_y, adjusted_width, adjusted_height = self.apply_boundary_constraints(
+                orig_x, orig_y, orig_width, orig_height
+            )
+
+            # Update spinboxes if values were adjusted
+            if (adjusted_x != orig_x or adjusted_y != orig_y or 
+                adjusted_width != orig_width or adjusted_height != orig_height):
+                
+                self.disconnect_input_signals()
+                self.x_input.setValue(adjusted_x)
+                self.y_input.setValue(adjusted_y)
+                self.width_input.setValue(adjusted_width)
+                self.height_input.setValue(adjusted_height)
+                self.connect_input_signals()
 
             if self.crop_box and self.image_with_cropbox:
                 # Convert from original image coordinates to display coordinates
                 if hasattr(self.image_with_cropbox, "original_to_display_coords"):
                     x, y, width, height = self.image_with_cropbox.original_to_display_coords(
-                        orig_x, orig_y, orig_width, orig_height
+                        adjusted_x, adjusted_y, adjusted_width, adjusted_height
                     )
                 else:
-                    x, y, width, height = orig_x, orig_y, orig_width, orig_height
+                    x, y, width, height = adjusted_x, adjusted_y, adjusted_width, adjusted_height
 
                 self.crop_box.setCropRect(x, y, width, height, apply_constraints=True)
 
         except ValueError:
             pass
 
+    def apply_boundary_constraints(self, x, y, width, height):
+        if not self.image_with_cropbox or not hasattr(self.image_with_cropbox, 'pil_image'):
+            return x, y, width, height
+            
+        image_width = self.image_with_cropbox.pil_image.width
+        image_height = self.image_with_cropbox.pil_image.height
+        
+        # Ensure minimum dimensions
+        width = max(1, width)
+        height = max(1, height)
+        
+        # Adjust width if x + width exceeds image bounds
+        if x + width > image_width:
+            width = image_width - x
+            width = max(1, width)  # Ensure minimum width
+        
+        # Adjust height if y + height exceeds image bounds
+        if y + height > image_height:
+            height = image_height - y
+            height = max(1, height)  # Ensure minimum height
+        
+        # If width is still too small, adjust x
+        if width < 1:
+            x = max(0, image_width - 1)
+            width = 1
+            
+        # If height is still too small, adjust y
+        if height < 1:
+            y = max(0, image_height - 1)
+            height = 1
+            
+        # Final bounds check
+        x = max(0, min(x, image_width - width))
+        y = max(0, min(y, image_height - height))
+        
+        return x, y, width, height
+
     def disconnect_input_signals(self):
         if self.crop_box:
-            self.x_input.textChanged.disconnect()
-            self.y_input.textChanged.disconnect()
-            self.width_input.textChanged.disconnect()
-            self.height_input.textChanged.disconnect()
+            self.x_input.valueChanged.disconnect()
+            self.y_input.valueChanged.disconnect()
+            self.width_input.valueChanged.disconnect()
+            self.height_input.valueChanged.disconnect()
 
     def connect_input_signals(self):
         if self.crop_box:
-            self.x_input.textChanged.connect(self.update_crop_from_fields)
-            self.y_input.textChanged.connect(self.update_crop_from_fields)
-            self.width_input.textChanged.connect(self.update_crop_from_fields)
-            self.height_input.textChanged.connect(self.update_crop_from_fields)
+            self.x_input.valueChanged.connect(self.update_crop_from_fields)
+            self.y_input.valueChanged.connect(self.update_crop_from_fields)
+            self.width_input.valueChanged.connect(self.update_crop_from_fields)
+            self.height_input.valueChanged.connect(self.update_crop_from_fields)
 
     def start_crop_process(self):
         try:
-            x = int(self.x_input.text())
-            y = int(self.y_input.text())
-            width = int(self.width_input.text())
-            height = int(self.height_input.text())
+            x = self.x_input.value()
+            y = self.y_input.value()
+            width = self.width_input.value()
+            height = self.height_input.value()
 
             # Ensure dimensions are even numbers (required for H.264)
             if width % 2 == 1:
@@ -284,7 +372,7 @@ class ControlPanel(QWidget):
             centered_x = (image_width - current_width) // 2
             
             # Update the input fields
-            self.x_input.setText(str(centered_x))
+            self.x_input.setValue(centered_x)
             
         except ValueError:
             print("Please enter valid dimensions before aligning")
@@ -304,7 +392,7 @@ class ControlPanel(QWidget):
             centered_y = (image_height - current_height) // 2
             
             # Update the input fields
-            self.y_input.setText(str(centered_y))
+            self.y_input.setValue(centered_y)
             
         except ValueError:
             print("Please enter valid dimensions before aligning")
@@ -350,10 +438,10 @@ class ControlPanel(QWidget):
         new_y = (image_height - new_height) // 2
         
         # Update input fields
-        self.x_input.setText(str(new_x))
-        self.y_input.setText(str(new_y))
-        self.width_input.setText(str(new_width))
-        self.height_input.setText(str(new_height))
+        self.x_input.setValue(new_x)
+        self.y_input.setValue(new_y)
+        self.width_input.setValue(new_width)
+        self.height_input.setValue(new_height)
 
     def calculate_aspect_ratio_dimensions(self, ratio_text, current_width, current_height):
         if not self.image_with_cropbox:
