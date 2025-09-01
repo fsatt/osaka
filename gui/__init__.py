@@ -9,4 +9,4 @@ def run_gui(image_path, video_path=None, output_path="temp"):
     app = QApplication(sys.argv)
     gui = CropGUI(image_path, video_path)
     gui.show()
-    sys.exit(app.exec())
+    return app.exec()  # Return the exit code instead of sys.exit()
