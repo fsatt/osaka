@@ -248,9 +248,14 @@ class ControlPanel(QWidget):
             orig_width = self.width_input.value()
             orig_height = self.height_input.value()
 
-            # Apply boundary constraints and get adjusted values
-            adjusted_x, adjusted_y, adjusted_width, adjusted_height = self.apply_boundary_constraints(
+            # Apply aspect ratio constraints first if locked
+            adjusted_x, adjusted_y, adjusted_width, adjusted_height = self.apply_aspect_ratio_constraints(
                 orig_x, orig_y, orig_width, orig_height
+            )
+
+            # Then apply boundary constraints
+            adjusted_x, adjusted_y, adjusted_width, adjusted_height = self.apply_boundary_constraints(
+                adjusted_x, adjusted_y, adjusted_width, adjusted_height
             )
 
             # Update spinboxes if values were adjusted
@@ -273,10 +278,61 @@ class ControlPanel(QWidget):
                 else:
                     x, y, width, height = adjusted_x, adjusted_y, adjusted_width, adjusted_height
 
-                self.crop_box.setCropRect(x, y, width, height, apply_constraints=True)
+                self.crop_box.setCropRect(x, y, width, height)
 
         except ValueError:
             pass
+
+    def apply_aspect_ratio_constraints(self, x, y, width, height):
+        current_ratio_text = self.aspect_ratio_combo.currentText()
+        
+        # If custom mode or no crop box, return values unchanged
+        if current_ratio_text == "Custom" or not self.crop_box:
+            return x, y, width, height
+            
+        # Get the target aspect ratio
+        aspect_ratio = self.get_aspect_ratio_value(current_ratio_text)
+        if aspect_ratio is None:
+            return x, y, width, height
+            
+        # Calculate what the other dimension should be to maintain aspect ratio
+        expected_height_from_width = width / aspect_ratio
+        expected_width_from_height = height * aspect_ratio
+        
+        # Get image dimensions for bounds checking
+        if self.image_with_cropbox and hasattr(self.image_with_cropbox, 'pil_image'):
+            image_width = self.image_with_cropbox.pil_image.width
+            image_height = self.image_with_cropbox.pil_image.height
+        else:
+            image_width = width * 2  # Fallback
+            image_height = height * 2
+            
+        # Choose which dimension to constrain based on what fits better within bounds
+        width_fits = (x + expected_width_from_height <= image_width and expected_width_from_height >= 20)
+        height_fits = (y + expected_height_from_width <= image_height and expected_height_from_width >= 20)
+        
+        if width_fits and height_fits:
+            # Both fit, choose the one that results in larger area (less constraining)
+            area_from_width = width * expected_height_from_width
+            area_from_height = expected_width_from_height * height
+            
+            if area_from_width >= area_from_height:
+                # Width-driven constraint gives larger area
+                height = int(expected_height_from_width)
+            else:
+                # Height-driven constraint gives larger area
+                width = int(expected_width_from_height)
+        elif width_fits:
+            # Only width-constrained version fits
+            width = int(expected_width_from_height)
+        elif height_fits:
+            # Only height-constrained version fits
+            height = int(expected_height_from_width)
+        else:
+            # Neither fits perfectly, use width as driver (will be constrained by boundary function)
+            height = int(expected_height_from_width)
+            
+        return x, y, width, height
 
     def apply_boundary_constraints(self, x, y, width, height):
         if not self.image_with_cropbox or not hasattr(self.image_with_cropbox, 'pil_image'):
@@ -442,12 +498,43 @@ class ControlPanel(QWidget):
         if current_ratio in ["3:4", "9:16"]:
             self.on_aspect_ratio_changed(current_ratio)
 
+    def get_aspect_ratio_value(self, ratio_text):
+        if not self.image_with_cropbox:
+            return None
+            
+        if ratio_text == "Custom":
+            return None  # No aspect ratio constraint
+        elif ratio_text == "Original":
+            # Use original image aspect ratio
+            image_width = self.image_with_cropbox.pil_image.width
+            image_height = self.image_with_cropbox.pil_image.height
+            return image_width / image_height
+        elif ratio_text == "1:1":
+            return 1.0
+        elif ratio_text == "3:4":
+            if self.orientation_portrait.isChecked():  # Portrait
+                return 3.0 / 4.0
+            else:  # Landscape
+                return 4.0 / 3.0
+        elif ratio_text == "9:16":
+            if self.orientation_portrait.isChecked():  # Portrait
+                return 9.0 / 16.0
+            else:  # Landscape
+                return 16.0 / 9.0
+        else:
+            return None
+
     def on_aspect_ratio_changed(self, ratio_text):
         if not self.crop_box or not self.image_with_cropbox:
             return
+        
+        # Get the aspect ratio value and set it in the crop box
+        aspect_ratio = self.get_aspect_ratio_value(ratio_text)
+        if hasattr(self.crop_box, 'aspect_ratio'):
+            self.crop_box.aspect_ratio = aspect_ratio
             
         if ratio_text == "Custom":
-            # No constraints
+            # No constraints for custom
             return
         
         # Get current crop dimensions
@@ -477,22 +564,9 @@ class ControlPanel(QWidget):
         image_width = self.image_with_cropbox.pil_image.width
         image_height = self.image_with_cropbox.pil_image.height
         
-        if ratio_text == "Original":
-            # Use original image aspect ratio
-            aspect_ratio = image_width / image_height
-        elif ratio_text == "1:1":
-            aspect_ratio = 1.0
-        elif ratio_text == "3:4":
-            if self.orientation_portrait.isChecked():  # Portrait
-                aspect_ratio = 3.0 / 4.0
-            else:  # Landscape
-                aspect_ratio = 4.0 / 3.0
-        elif ratio_text == "9:16":
-            if self.orientation_portrait.isChecked():  # Portrait
-                aspect_ratio = 9.0 / 16.0
-            else:  # Landscape
-                aspect_ratio = 16.0 / 9.0
-        else:
+        # Get the aspect ratio value
+        aspect_ratio = self.get_aspect_ratio_value(ratio_text)
+        if aspect_ratio is None:
             return current_width, current_height
         
         # Calculate dimensions that fit within the image and maximize area
