@@ -14,11 +14,14 @@ class ResizableCropBox(QWidget):
         self.rect = QRect(0, 0, parent.width(), parent.height())
         # Store the original floating-point rectangle for precise scaling
         self.float_rect = [0.0, 0.0, float(parent.width()), float(parent.height())]
-        self.handle_size = 10
-        self.drag_handle = None
-        self.drag_position = None
         # Store previous size for proportional scaling
         self.previous_size = self.size()
+        self.handle_size = 10
+        self.min_height = 20
+        self.min_width = 20
+        self.drag_handle = None
+        self.drag_start = None
+        self.drag_rect_initial = None
 
     def resizeEvent(self, event):
         old_size = event.oldSize()
@@ -58,64 +61,21 @@ class ResizableCropBox(QWidget):
 
         return bounds
 
-    def _constrain_movement(self, rect):
-        bounds = self._get_bounds_rect()
-
-        # Ensure the rectangle stays within bounds
-        if rect.left() < 0:
-            rect.moveLeft(0)
-        if rect.top() < 0:
-            rect.moveTop(0)
-        if rect.right() >= bounds.width():
-            rect.moveRight(bounds.width() - 1)
-        if rect.bottom() >= bounds.height():
-            rect.moveBottom(bounds.height() - 1)
-
-        return rect
-
-    def _constrain_resize(self, rect, min_width=20, min_height=20):
-        bounds = self._get_bounds_rect()
-
-        # Clamp to bounds with dimension calculations
-        clamped_rect = QRect(
-            max(0, rect.left()),
-            max(0, rect.top()),
-            min(rect.width(), bounds.width() - max(0, rect.left())),
-            min(rect.height(), bounds.height() - max(0, rect.top())),
-        )
-
-        # Don't grow width if x is clamped, don't grow height if y is clamped
-        if rect.left() < 0:
-            clamped_rect.setRight(self.rect.right())
-        if rect.top() < 0:
-            clamped_rect.setBottom(self.rect.bottom())
+    def apply_aspect_ratio(self, rect, delta, aspect_ratio="1:1"):
         
-        # Ensure minimum dimensions
-        if clamped_rect.width() < min_width:
-            clamped_rect.setLeft(self.rect.left())
-            clamped_rect.setRight(self.rect.right())
-            # clamped_rect.setWidth(min_width)
-        if clamped_rect.height() < min_height:
-            clamped_rect.setTop(self.rect.top())
-            clamped_rect.setBottom(self.rect.bottom())
-            # clamped_rect.setHeight(min_height)
-        
-        return clamped_rect
+        if aspect_ratio == "original":
+            return rect
 
-    def constrain_crop_rect(self, x, y, width, height, min_width=20, min_height=20):
-        rect = QRect(x, y, width, height)
-        constrained = self._constrain_resize(rect, min_width, min_height)
-
-        if constrained is not None:
-            return (
-                constrained.x(),
-                constrained.y(),
-                constrained.width(),
-                constrained.height(),
-            )
-        else:
-            # Return current rect if the new one is invalid
-            return self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
+        # Calculate the new dimensions based on the aspect ratio
+        if aspect_ratio == "1:1":
+            new_size = min(self.drag_rect_initial.width() + delta.x(), self.drag_rect_initial.height() + delta.y())
+            return QRect(rect.x(), rect.y(), new_size, new_size)
+        elif aspect_ratio == "3:4":
+            new_height = rect.width() * 4 / 3
+            return QRect(rect.x(), rect.y(), rect.width(), new_height)
+        elif aspect_ratio == "9:16":
+            new_height = rect.width() * 16 / 9
+            return QRect(rect.x(), rect.y(), rect.width(), new_height)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -164,7 +124,8 @@ class ResizableCropBox(QWidget):
     def mousePressEvent(self, event):
         # Check if a handle is clicked
         if self.rect.contains(event.pos()):
-            self.drag_position = event.pos()
+            self.drag_start = event.pos()
+            self.drag_rect_initial = QRect(self.rect)  # Store initial rect
             # Check corners
             for x, y, handle in [
                 (self.rect.left(), self.rect.top(), "top_left"),
@@ -188,65 +149,66 @@ class ResizableCropBox(QWidget):
 
     def mouseMoveEvent(self, event):
         if self.drag_handle:
-            delta = event.pos() - self.drag_position
-            new_rect = self.rect
+            big_delta = event.pos() - self.drag_start
+            bounds = self._get_bounds_rect()
+            bounds.adjust(0, 0, -1, -1)  # Adjust bounds to prevent overflow
 
             if self.drag_handle == "move":
                 # For move operations, just translate without changing size
-                new_rect = self.rect.translated(delta)
+                new_rect = self.drag_rect_initial.translated(big_delta)
 
-                # Constrain movement to bounds using helper function
-                new_rect = self._constrain_movement(new_rect)
+                # Ensure the rectangle stays within bounds
+                if new_rect.left() < 0:
+                    new_rect.moveLeft(0)
+                if new_rect.top() < 0:
+                    new_rect.moveTop(0)
+                if new_rect.right() >= bounds.width():
+                    new_rect.moveRight(bounds.width())
+                if new_rect.bottom() >= bounds.height():
+                    new_rect.moveBottom(bounds.height())
 
                 self.setCropRect(
                     new_rect.x(),
                     new_rect.y(),
                     new_rect.width(),
                     new_rect.height(),
-                    apply_constraints=False,
                 )
-                self.drag_position = event.pos()
 
             else:
                 # Handle resize operations
-                if self.drag_handle == "top_left":
-                    new_rect = QRect(
-                        self.rect.topLeft() + delta, self.rect.bottomRight()
-                    )
-                elif self.drag_handle == "top_right":
-                    # Move top edge and right edge
-                    new_rect = QRect(
-                        self.rect.left(),
-                        self.rect.top() + delta.y(),
-                        self.rect.width() + delta.x(),
-                        self.rect.height() - delta.y(),
-                    )
-                elif self.drag_handle == "bottom_left":
-                    # Move bottom edge and left edge
-                    new_rect = QRect(
-                        self.rect.left() + delta.x(),
-                        self.rect.top(),
-                        self.rect.width() - delta.x(),
-                        self.rect.height() + delta.y(),
-                    )
-                elif self.drag_handle == "bottom_right":
-                    new_rect = QRect(
-                        self.rect.topLeft(), self.rect.bottomRight() + delta
-                    )
+                new_rect = QRect(self.rect)
 
-                # Constrain to bounds using helper function
-                constrained_rect = self._constrain_resize(new_rect)
+                # bind top
+                if self.drag_handle == "top_left" or self.drag_handle == "top_right":
+                    if (new_top := self.drag_rect_initial.top() + big_delta.y()) < self.drag_rect_initial.bottom() - self.min_height:
+                        new_rect.setTop(max(0, new_top))
+                    else:
+                        new_rect.setTop(self.drag_rect_initial.bottom() - self.min_height)
+                # bind bottom
+                if self.drag_handle == "bottom_left" or self.drag_handle == "bottom_right":
+                    if (new_bottom := self.drag_rect_initial.bottom() + big_delta.y()) > self.drag_rect_initial.top() + self.min_height:
+                        new_rect.setBottom(min(bounds.height(), new_bottom))
+                    else:
+                        new_rect.setBottom(self.drag_rect_initial.top() + self.min_height)
+                # bind left
+                if self.drag_handle == "top_left" or self.drag_handle == "bottom_left":
+                    if (new_left := self.drag_rect_initial.left() + big_delta.x()) < self.drag_rect_initial.right() - self.min_width:
+                        new_rect.setLeft(max(0, new_left))
+                    else:
+                        new_rect.setLeft(self.drag_rect_initial.right() - self.min_width)
+                # bind right
+                if self.drag_handle == "bottom_right" or self.drag_handle == "top_right":
+                    if (new_right := self.drag_rect_initial.right() + big_delta.x()) > self.drag_rect_initial.left() + self.min_width:
+                        new_rect.setRight(min(bounds.width(), new_right))
+                    else:
+                        new_rect.setRight(self.drag_rect_initial.left() + self.min_width)
 
-                # Only update if the constrained rectangle is valid
-                if constrained_rect is not None:
-                    self.setCropRect(
-                        constrained_rect.x(),
-                        constrained_rect.y(),
-                        constrained_rect.width(),
-                        constrained_rect.height(),
-                        apply_constraints=False,
-                    )
-                    self.drag_position = event.pos()
+                self.setCropRect(
+                    new_rect.x(),
+                    new_rect.y(),
+                    new_rect.width(),
+                    new_rect.height(),
+                )
 
     def mouseReleaseEvent(self, event):
         self.drag_handle = None
@@ -263,11 +225,7 @@ class ResizableCropBox(QWidget):
                 self.rect.x(), self.rect.y(), self.rect.width(), self.rect.height()
             )
 
-    def setCropRect(self, x, y, width, height, apply_constraints=True):
-        if apply_constraints:
-            # Apply constraints to the input coordinates
-            x, y, width, height = self.constrain_crop_rect(x, y, width, height)
-
+    def setCropRect(self, x, y, width, height):
         self.rect = QRect(x, y, width, height)
         self.float_rect[0] = float(x)
         self.float_rect[1] = float(y)
