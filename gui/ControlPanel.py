@@ -281,33 +281,34 @@ class ControlPanel(QWidget):
     def apply_boundary_constraints(self, x, y, width, height):
         if not self.image_with_cropbox or not hasattr(self.image_with_cropbox, 'pil_image'):
             return x, y, width, height
+        minimum_width, minimum_height = 20, 20
             
         image_width = self.image_with_cropbox.pil_image.width
         image_height = self.image_with_cropbox.pil_image.height
         
         # Ensure minimum dimensions
-        width = max(1, width)
-        height = max(1, height)
+        width = max(minimum_width, width)
+        height = max(minimum_height, height)
         
         # Adjust width if x + width exceeds image bounds
         if x + width > image_width:
             width = image_width - x
-            width = max(1, width)  # Ensure minimum width
+            width = max(minimum_width, width)  # Ensure minimum width
         
         # Adjust height if y + height exceeds image bounds
         if y + height > image_height:
             height = image_height - y
-            height = max(1, height)  # Ensure minimum height
+            height = max(minimum_height, height)  # Ensure minimum height
         
         # If width is still too small, adjust x
-        if width < 1:
-            x = max(0, image_width - 1)
-            width = 1
+        if width < minimum_width:
+            x = max(0, image_width - minimum_width)
+            width = minimum_width
             
         # If height is still too small, adjust y
-        if height < 1:
-            y = max(0, image_height - 1)
-            height = 1
+        if height < minimum_height:
+            y = max(0, image_height - minimum_height)
+            height = minimum_height
             
         # Final bounds check
         x = max(0, min(x, image_width - width))

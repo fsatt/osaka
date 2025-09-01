@@ -76,10 +76,7 @@ class ResizableCropBox(QWidget):
     def _constrain_resize(self, rect, min_width=20, min_height=20):
         bounds = self._get_bounds_rect()
 
-        # Normalize the rectangle to ensure positive dimensions
-        rect = rect.normalized()
-
-        # Clamp to bounds with careful dimension calculations
+        # Clamp to bounds with dimension calculations
         clamped_rect = QRect(
             max(0, rect.left()),
             max(0, rect.top()),
@@ -87,11 +84,23 @@ class ResizableCropBox(QWidget):
             min(rect.height(), bounds.height() - max(0, rect.top())),
         )
 
+        # Don't grow width if x is clamped, don't grow height if y is clamped
+        if rect.left() < 0:
+            clamped_rect.setRight(self.rect.right())
+        if rect.top() < 0:
+            clamped_rect.setBottom(self.rect.bottom())
+        
         # Ensure minimum dimensions
-        if clamped_rect.width() >= min_width and clamped_rect.height() >= min_height:
-            return clamped_rect
-        else:
-            return None  # Invalid rectangle
+        if clamped_rect.width() < min_width:
+            clamped_rect.setLeft(self.rect.left())
+            clamped_rect.setRight(self.rect.right())
+            # clamped_rect.setWidth(min_width)
+        if clamped_rect.height() < min_height:
+            clamped_rect.setTop(self.rect.top())
+            clamped_rect.setBottom(self.rect.bottom())
+            # clamped_rect.setHeight(min_height)
+        
+        return clamped_rect
 
     def constrain_crop_rect(self, x, y, width, height, min_width=20, min_height=20):
         rect = QRect(x, y, width, height)
@@ -224,9 +233,6 @@ class ResizableCropBox(QWidget):
                     new_rect = QRect(
                         self.rect.topLeft(), self.rect.bottomRight() + delta
                     )
-
-                # Normalize the rectangle to ensure positive dimensions
-                new_rect = new_rect.normalized()
 
                 # Constrain to bounds using helper function
                 constrained_rect = self._constrain_resize(new_rect)
