@@ -44,10 +44,10 @@ class ResizableCropBox(QWidget):
 
             # Convert to integer rectangle
             new_rect = QRect(
-                int(self.float_rect[0]),
-                int(self.float_rect[1]),
-                int(self.float_rect[2]),
-                int(self.float_rect[3]),
+                round(self.float_rect[0]),
+                round(self.float_rect[1]),
+                round(self.float_rect[2]),
+                round(self.float_rect[3]),
             )
 
             self.rect = new_rect
@@ -324,34 +324,57 @@ class ResizableCropBox(QWidget):
                         new_height = self.min_height
                         new_width = new_height * self.aspect_ratio
 
+                    # Snap-to-edge logic: if we're very close to max bounds, snap to full size
+                    snap_tolerance = config.SNAP_TOLERANCE
+                    max_possible_width = bounds.width()
+                    max_possible_height = bounds.height()
+
+                    # Check if we're close to maximum width and can snap
+                    if abs(new_width - max_possible_width) <= snap_tolerance:
+                        new_width = max_possible_width
+                        new_height = new_width / self.aspect_ratio
+                        # Make sure height still fits after width snap
+                        if new_height > max_possible_height:
+                            new_height = max_possible_height
+                            new_width = new_height * self.aspect_ratio
+
+                    # Check if we're close to maximum height and can snap
+                    elif abs(new_height - max_possible_height) <= snap_tolerance:
+                        new_height = max_possible_height
+                        new_width = new_height * self.aspect_ratio
+                        # Make sure width still fits after height snap
+                        if new_width > max_possible_width:
+                            new_width = max_possible_width
+                            new_height = new_width / self.aspect_ratio
+
                     # Position the new rectangle based on which handle is being dragged
                     if self.drag_handle == "top_left":
                         new_rect = QRect(
-                            self.drag_rect_initial.right() - int(new_width) + 1,
-                            self.drag_rect_initial.bottom() - int(new_height) + 1,
-                            int(new_width),
-                            int(new_height),
+                            self.drag_rect_initial.right() - round(new_width) + 1,
+                            self.drag_rect_initial.bottom() - round(new_height) + 1,
+                            round(new_width),
+                            round(new_height),
                         )
                     elif self.drag_handle == "top_right":
                         new_rect = QRect(
                             self.drag_rect_initial.left(),
-                            self.drag_rect_initial.bottom() - int(new_height) + 1,
-                            int(new_width),
-                            int(new_height),
+                            self.drag_rect_initial.bottom() - round(new_height) + 1,
+                            round(new_width),
+                            round(new_height),
                         )
                     elif self.drag_handle == "bottom_left":
                         new_rect = QRect(
-                            self.drag_rect_initial.right() - int(new_width) + 1,
+                            self.drag_rect_initial.right() - round(new_width) + 1,
                             self.drag_rect_initial.top(),
-                            int(new_width),
-                            int(new_height),
+                            round(new_width),
+                            round(new_height),
                         )
                     elif self.drag_handle == "bottom_right":
                         new_rect = QRect(
                             self.drag_rect_initial.left(),
                             self.drag_rect_initial.top(),
-                            int(new_width),
-                            int(new_height),
+                            round(new_width),
+                            round(new_height),
                         )
 
                 self.setCropRect(

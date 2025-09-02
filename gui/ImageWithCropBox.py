@@ -83,10 +83,10 @@ class ImageWithCropBox(QWidget):
         scale_x = self.pil_image.width / self.image_area.width()
         scale_y = self.pil_image.height / self.image_area.height()
 
-        orig_x = int(x * scale_x)
-        orig_y = int(y * scale_y)
-        orig_width = int(width * scale_x)
-        orig_height = int(height * scale_y)
+        orig_x = round(x * scale_x)
+        orig_y = round(y * scale_y)
+        orig_width = round(width * scale_x)
+        orig_height = round(height * scale_y)
 
         return orig_x, orig_y, orig_width, orig_height
 
@@ -98,10 +98,10 @@ class ImageWithCropBox(QWidget):
         scale_x = self.image_area.width() / self.pil_image.width
         scale_y = self.image_area.height() / self.pil_image.height
 
-        x = int(orig_x * scale_x)
-        y = int(orig_y * scale_y)
-        width = int(orig_width * scale_x)
-        height = int(orig_height * scale_y)
+        x = round(orig_x * scale_x)
+        y = round(orig_y * scale_y)
+        width = round(orig_width * scale_x)
+        height = round(orig_height * scale_y)
 
         return x, y, width, height
 
@@ -114,7 +114,7 @@ class ImageWithCropBox(QWidget):
         w, h = self.pil_image.size
         aspect_ratio = w / h
         base_height = 300
-        return QSize(int(base_height * aspect_ratio), base_height)
+        return QSize(round(base_height * aspect_ratio), base_height)
 
     def get_crop_coordinates(self):
         if not self.crop_box or self.image_area.isEmpty():
@@ -123,23 +123,15 @@ class ImageWithCropBox(QWidget):
         # Convert crop box coordinates from display to original image coordinates
         crop_rect = self.crop_box.rect
 
-        # Calculate scaling factors
-        scale_x = (
-            self.pixmap.width() / self.image_area.width()
-            if self.image_area.width() > 0
-            else 1
-        )
-        scale_y = (
-            self.pixmap.height() / self.image_area.height()
-            if self.image_area.height() > 0
-            else 1
-        )
+        # Use consistent scaling factors with display_to_original_coords method
+        scale_x = self.pil_image.width / self.image_area.width()
+        scale_y = self.pil_image.height / self.image_area.height()
 
-        # Convert to image coordinates
-        img_x = int(crop_rect.x() * scale_x)
-        img_y = int(crop_rect.y() * scale_y)
-        img_w = int(crop_rect.width() * scale_x)
-        img_h = int(crop_rect.height() * scale_y)
+        # Convert to image coordinates (round to avoid precision loss)
+        img_x = round(crop_rect.x() * scale_x)
+        img_y = round(crop_rect.y() * scale_y)
+        img_w = round(crop_rect.width() * scale_x)
+        img_h = round(crop_rect.height() * scale_y)
 
         return (img_x, img_y, img_w, img_h)
 

@@ -162,7 +162,7 @@ if __name__ == "__main__":
         main()
     else:
         print("Oh my gah!")
-        print('''
+        print("""
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣤⣤⣤⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⣠⡶⡿⢿⣿⣛⣟⣿⡿⢿⢿⣷⣦⡀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⢰⣯⣷⣿⣿⣿⢟⠃⢿⣟⣿⣿⣾⣷⣽⣺⢆⠀⠀⠀⠀⠀
@@ -177,10 +177,11 @@ if __name__ == "__main__":
 ⠀⠀⠀⠀⠀⢸⠿⣿⡈⠋⠀⠀⡇⠀⠀⠀⢰⠃⢠⣿⡟⣿⣿⢻⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠸⡆⠛⠇⢀⡀⠀⡇⠀⠀⡞⠀⠀⣸⠟⡊⠁⠚⠌⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⡍⠨⠊⣒⠴⠀⡇⡴⠋⡋⢐⠐⠅⡀⠐⢠⠕⠂⢂⠀⠀⠀
-              ''')
+              """)
         # Play sound in background using PowerShell (fire and forget)
         try:
             import subprocess
+
             sound_file = os.path.abspath("assets/sound/oh-my-gah.mp3")
             # Use PowerShell's MediaPlayer to play without UI
             ps_command = f'''
@@ -190,7 +191,9 @@ if __name__ == "__main__":
             $mediaPlayer.Play();
             Start-Sleep -Seconds 2;
             '''
-            subprocess.Popen(["powershell", "-WindowStyle", "Hidden", "-Command", ps_command], 
-                           creationflags=subprocess.CREATE_NO_WINDOW)
+            subprocess.Popen(
+                ["powershell", "-WindowStyle", "Hidden", "-Command", ps_command],
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
         except Exception as e:
             print(f"Could not play sound: {e}")

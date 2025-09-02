@@ -429,19 +429,19 @@ class ControlPanel(QWidget):
 
             if area_from_width >= area_from_height:
                 # Width-driven constraint gives larger area
-                height = int(expected_height_from_width)
+                height = round(expected_height_from_width)
             else:
                 # Height-driven constraint gives larger area
-                width = int(expected_width_from_height)
+                width = round(expected_width_from_height)
         elif width_fits:
             # Only width-constrained version fits
-            width = int(expected_width_from_height)
+            width = round(expected_width_from_height)
         elif height_fits:
             # Only height-constrained version fits
-            height = int(expected_height_from_width)
+            height = round(expected_height_from_width)
         else:
             # Neither fits perfectly, use width as driver (will be constrained by boundary function)
-            height = int(expected_height_from_width)
+            height = round(expected_height_from_width)
 
         return x, y, width, height
 
@@ -675,12 +675,12 @@ class ControlPanel(QWidget):
         # Calculate dimensions that fit within the image and maximize area
         if aspect_ratio >= 1:  # Wide aspect ratio
             # Width-limited
-            new_width = min(image_width, int(image_height * aspect_ratio))
-            new_height = int(new_width / aspect_ratio)
+            new_width = min(image_width, round(image_height * aspect_ratio))
+            new_height = round(new_width / aspect_ratio)
         else:  # Tall aspect ratio
             # Height-limited
-            new_height = min(image_height, int(image_width / aspect_ratio))
-            new_width = int(new_height * aspect_ratio)
+            new_height = min(image_height, round(image_width / aspect_ratio))
+            new_width = round(new_height * aspect_ratio)
 
         # Ensure dimensions don't exceed image bounds
         new_width = min(new_width, image_width)
