@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "osaka"
+version = "1.0.0"
+description = "Video cropping tool with PyQt6 interface"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "fsatt" }
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "PyQt6",
+    "opencv-python",
+    "Pillow",
+    "yt-dlp",
+    "moviepy",
+]
+
+[project.scripts]
+osaka = "main:main"
+
+[project.urls]
+Homepage = "https://github.com/fsatt/osaka"
+Repository = "https://github.com/fsatt/osaka"
+
+[tool.uv]
+dev-dependencies = [
+    "ruff",
+]
