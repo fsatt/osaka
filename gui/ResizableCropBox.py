@@ -102,8 +102,8 @@ class ResizableCropBox(QWidget):
         painter.drawRect(self.rect)
 
         # Draw resize handles
-        painter.setPen(QPen(QColor(255, 255, 255), 1))
-        painter.setBrush(QBrush(QColor(255, 255, 255)))
+        painter.setPen(QPen(QColor(255, 255, 255, 100), 1))
+        painter.setBrush(QBrush(QColor(255, 255, 255, 100)))
         for x in [self.rect.left(), self.rect.right() - self.handle_size]:
             for y in [self.rect.top(), self.rect.bottom() - self.handle_size]:
                 painter.drawRect(x, y, self.handle_size, self.handle_size)
