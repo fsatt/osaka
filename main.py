@@ -5,7 +5,7 @@ import os
 
 from config_loader import config, runtime_config
 from gui import run_gui
-from video_utils import download_video, get_first_frame
+from video_utils import download_video, get_first_frame, format_path
 
 
 def main():
@@ -77,9 +77,9 @@ Examples:
         # Local video file
         video_path = args.input
         if not os.path.exists(video_path):
-            print(f"Error: Video file '{video_path}' not found")
+            print(f"Error: Video file {format_path(video_path)} not found")
             sys.exit(1)
-        print(f"Using local video: {video_path}")
+        print(f"Using local video: {format_path(video_path)}")
     else:
         # Download from URL
         print(f"Downloading video from: {args.input}")
@@ -122,11 +122,15 @@ Examples:
             print(f"GUI closed with error code: {exit_code}")
 
     try:
-        print(f"Copying video to: {args.output}{ext}")
+        print(
+            f"Copying video to: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
+        )
         shutil.copy2(video_path, f"{config.OUTPUT_DIR}/{args.output}{ext}")
-        print(f"Video saved as: {args.output}{ext}")
+        print(
+            f"Video saved as: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
+        )
     except FileNotFoundError:
-        print(f"No video found at {video_path}, nothing to copy.")
+        print(f"No video found at {format_path(video_path)}, nothing to copy.")
 
     # Cleanup temporary files unless --keep-temp flag is used
     if not args.keep_temp:
@@ -136,7 +140,7 @@ Examples:
             temp_dir_path = f"{config.TEMP_DIR}/{args.output}"
             if os.path.exists(temp_dir_path):
                 shutil.rmtree(temp_dir_path)
-                print(f"Removed temporary directory: {temp_dir_path}")
+                print(f"Removed temporary directory: {format_path(temp_dir_path)}")
         except Exception as e:
             print(f"Warning: Could not cleanup some temporary files: {e}")
     else:

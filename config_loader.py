@@ -10,10 +10,14 @@ def load_config():
     if not os.path.exists(config_path):
         if os.path.exists(example_path):
             shutil.copy2(example_path, config_path)
-            print(f"Created {config_path} from {example_path}")
+            print(
+                f'Created "{os.path.normpath(config_path)}" from "{os.path.normpath(example_path)}"'
+            )
             print("You can now edit config.py with your personal settings.")
         else:
-            raise FileNotFoundError(f"Neither {config_path} nor {example_path} found")
+            raise FileNotFoundError(
+                f'Neither "{os.path.normpath(config_path)}" nor "{os.path.normpath(example_path)}" found'
+            )
 
     # Import the config module
     try:

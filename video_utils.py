@@ -8,6 +8,17 @@ from PIL import Image
 from config_loader import runtime_config
 
 
+def format_path(path):
+    if not path:
+        return '""'
+
+    # Normalize path separators to the OS standard
+    normalized_path = os.path.normpath(path)
+
+    # Add quotes around the path
+    return f'"{normalized_path}"'
+
+
 def download_video(url, output_path):
     ydl_opts = {
         "outtmpl": f"{output_path}/raw.%(ext)s",
@@ -65,7 +76,7 @@ def crop_video(video_path, output_path, x, y, width, height):
         base_name = os.path.splitext(os.path.basename(video_path))[0]
         cropped_video_path = f"{output_path}/{base_name}_cropped.mp4"
 
-        print(f"Saving cropped video to: {cropped_video_path}")
+        print(f"Saving cropped video to: {format_path(cropped_video_path)}")
 
         # Create temp audio file path in the same directory as output
         temp_audio_path = f"{output_path}/temp-audio.m4a"
@@ -83,7 +94,9 @@ def crop_video(video_path, output_path, x, y, width, height):
         cropped_clip.close()
         clip.close()
 
-        print(f"Video cropping completed! Output saved to: {cropped_video_path}")
+        print(
+            f"Video cropping completed! Output saved to: {format_path(cropped_video_path)}"
+        )
 
     except ValueError:
         print("Please enter valid integer values for cropping coordinates.")
