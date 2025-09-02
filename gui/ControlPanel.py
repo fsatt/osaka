@@ -11,10 +11,9 @@ from PyQt6.QtWidgets import (
     QSpinBox,
 )
 from PyQt6.QtGui import QIcon
-from moviepy import VideoFileClip
-from moviepy.video.fx.Crop import Crop
 
 from config_loader import config
+from video_utils import crop_video
 
 
 class ControlPanel(QWidget):
@@ -466,78 +465,39 @@ class ControlPanel(QWidget):
             self.width_input.valueChanged.connect(self.update_crop_from_fields)
             self.height_input.valueChanged.connect(self.update_crop_from_fields)
 
-    def start_crop_process(self):
+    def start_crop_background(self):
+        # Extract all necessary data before starting the thread
+        # This prevents issues with Qt objects being deleted
         try:
             x = self.x_input.value()
             y = self.y_input.value()
             width = self.width_input.value()
             height = self.height_input.value()
+            video_path = self.video_path
+            output_path = self.output_path
 
-            # Ensure dimensions are even numbers (required for H.264)
-            if width % 2 == 1:
-                width -= 1
-                print(f"Adjusted width to {width} (must be even for H.264)")
-            if height % 2 == 1:
-                height -= 1
-                print(f"Adjusted height to {height} (must be even for H.264)")
+            # Define a function that captures the data
+            def crop_func():
+                crop_video(video_path, output_path, x, y, width, height)
 
-            print(
-                f"Cropping video with coordinates: X={x}, Y={y}, Width={width}, Height={height}"
-            )
+            # Start the crop process in a separate thread
+            crop_thread = threading.Thread(target=crop_func)
+            crop_thread.start()
 
-            if not self.video_path:
-                print("No video path provided - cannot crop video")
-                return
+            # Store the thread reference in the parent GUI
+            if self.parent() and hasattr(self.parent(), "set_crop_thread"):
+                self.parent().set_crop_thread(crop_thread)
 
-            # Load the video
-            clip = VideoFileClip(self.video_path)
+            # Only close the window if auto_close is True (--keep-gui flag not set)
+            if (
+                self.parent()
+                and hasattr(self.parent(), "auto_close")
+                and self.parent().auto_close
+            ):
+                self.parent().close()
 
-            # Crop the video
-            crop_effect = Crop(x1=x, y1=y, x2=x + width, y2=y + height)
-            cropped_clip = clip.with_effects([crop_effect])
-
-            # Generate output filename
-            base_name = os.path.splitext(os.path.basename(self.video_path))[0]
-            cropped_video_path = f"{self.output_path}/{base_name}_cropped.mp4"
-
-            print(f"Saving cropped video to: {cropped_video_path}")
-
-            # Write the cropped video with Windows-compatible settings
-            cropped_clip.write_videofile(
-                cropped_video_path,
-                codec="libx264",
-                audio_codec="aac",
-                temp_audiofile="temp-audio.m4a",
-                remove_temp=True,
-            )
-
-            # Clean up
-            cropped_clip.close()
-            clip.close()
-
-            print(f"Video cropping completed! Output saved to: {cropped_video_path}")
-
-        except ValueError:
-            print("Please enter valid integer values for cropping coordinates.")
         except Exception as e:
-            print(f"Error during video cropping: {e}")
-
-    def start_crop_background(self):
-        # Start the crop process in a separate thread (not daemon so main can wait)
-        crop_thread = threading.Thread(target=self.start_crop_process)
-        crop_thread.start()
-
-        # Store the thread reference in the parent GUI
-        if self.parent() and hasattr(self.parent(), "set_crop_thread"):
-            self.parent().set_crop_thread(crop_thread)
-
-        # Only close the window if auto_close is True (--keep-gui flag not set)
-        if (
-            self.parent()
-            and hasattr(self.parent(), "auto_close")
-            and self.parent().auto_close
-        ):
-            self.parent().close()
+            print(f"Error starting crop process: {e}")
 
     def align_horizontal(self):
         if not self.crop_box or not self.image_with_cropbox:

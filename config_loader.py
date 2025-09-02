@@ -29,3 +29,15 @@ try:
     config = load_config()
 except (FileNotFoundError, ImportError):
     raise
+
+
+# Runtime flags that can be set by main.py
+class RuntimeConfig:
+    keep_temp_files = False
+
+    @classmethod
+    def set_keep_temp(cls, value):
+        cls.keep_temp_files = value
+
+
+runtime_config = RuntimeConfig()

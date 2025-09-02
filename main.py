@@ -3,40 +3,9 @@ import shutil
 import sys
 import os
 
-import yt_dlp
-from moviepy import VideoFileClip
-from PIL import Image
-
-from config_loader import config
+from config_loader import config, runtime_config
 from gui import run_gui
-
-
-def download_video(url, output_path):
-    ydl_opts = {
-        "outtmpl": f"{output_path}/raw.%(ext)s",
-        "format": "bestvideo+bestaudio/best",
-        "noplaylist": True,
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        ext = info.get("ext")
-
-        return f"{output_path}/raw.{ext}"
-
-
-def get_first_frame(video_path, output_path):
-    try:
-        clip = VideoFileClip(video_path)
-        frame_array = clip.get_frame(0)
-        image = Image.fromarray(frame_array)
-        frame_path = f"{output_path}/first_frame.jpg"
-        image.save(frame_path)
-        clip.close()
-        return frame_path
-
-    except Exception as e:
-        print(f"An error occurred extracting first frame: {e}")
-        return None
+from video_utils import download_video, get_first_frame
 
 
 def main():
@@ -96,6 +65,9 @@ Examples:
 
     args = parser.parse_args()
 
+    # Set runtime configuration based on command line flags
+    runtime_config.set_keep_temp(args.keep_temp)
+
     # Create temp directory if it doesn't exist
     os.makedirs(config.TEMP_DIR, exist_ok=True)
     os.makedirs(f"{config.TEMP_DIR}/{args.output}", exist_ok=True)
@@ -111,9 +83,7 @@ Examples:
     else:
         # Download from URL
         print(f"Downloading video from: {args.input}")
-        video_path = download_video(
-            args.input, args.output, f"{config.TEMP_DIR}/{args.output}"
-        )
+        video_path = download_video(args.input, f"{config.TEMP_DIR}/{args.output}")
         if not video_path:
             print("Error: Failed to download video")
             sys.exit(1)
@@ -123,9 +93,7 @@ Examples:
     if not args.nocrop:
         # Generate first frame for GUI and launch cropping interface
         print("Extracting first frame...")
-        first_frame = get_first_frame(
-            video_path, args.output, f"{config.TEMP_DIR}/{args.output}"
-        )
+        first_frame = get_first_frame(video_path, f"{config.TEMP_DIR}/{args.output}")
         if not first_frame:
             print("Error: Could not extract first frame")
             sys.exit(1)
