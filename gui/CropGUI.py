@@ -46,6 +46,6 @@ class CropGUI(QWidget):
 
     def set_crop_thread(self, thread):
         self.crop_thread = thread
-    
+
     def get_crop_thread(self):
         return self.crop_thread

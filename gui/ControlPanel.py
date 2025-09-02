@@ -526,13 +526,17 @@ class ControlPanel(QWidget):
         # Start the crop process in a separate thread (not daemon so main can wait)
         crop_thread = threading.Thread(target=self.start_crop_process)
         crop_thread.start()
-        
+
         # Store the thread reference in the parent GUI
-        if self.parent() and hasattr(self.parent(), 'set_crop_thread'):
+        if self.parent() and hasattr(self.parent(), "set_crop_thread"):
             self.parent().set_crop_thread(crop_thread)
-        
+
         # Only close the window if auto_close is True (--keep-gui flag not set)
-        if self.parent() and hasattr(self.parent(), 'auto_close') and self.parent().auto_close:
+        if (
+            self.parent()
+            and hasattr(self.parent(), "auto_close")
+            and self.parent().auto_close
+        ):
             self.parent().close()
 
     def align_horizontal(self):

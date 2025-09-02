@@ -56,27 +56,42 @@ Examples:
   
   # Keep GUI open after cropping and keep temporary files
   osaka --keep-gui --keep-temp "url" "output"
-        """
+        """,
     )
 
     # Video source option
-    parser.add_argument("--video", "-v", action="store_true", 
-                       help="Use local video file instead of URL")
-    
+    parser.add_argument(
+        "--video", "-v", action="store_true", help="Use local video file instead of URL"
+    )
+
     # No crop flag - skip GUI and just download/copy
-    parser.add_argument("--nocrop", "-n", action="store_true",
-                       help="Skip cropping, just download the video")
+    parser.add_argument(
+        "--nocrop",
+        "-n",
+        action="store_true",
+        help="Skip cropping, just download the video",
+    )
 
     # Keep GUI open after cropping
-    parser.add_argument("--keep-gui", "-k", action="store_true",
-                       help="Keep GUI open after crop button is clicked")
-    
+    parser.add_argument(
+        "--keep-gui",
+        "-k",
+        action="store_true",
+        help="Keep GUI open after crop button is clicked",
+    )
+
     # Keep temporary files
-    parser.add_argument("--keep-temp", "-t", action="store_true",
-                       help="Keep temporary files (don't cleanup at end)")
+    parser.add_argument(
+        "--keep-temp",
+        "-t",
+        action="store_true",
+        help="Keep temporary files (don't cleanup at end)",
+    )
 
     # Positional arguments
-    parser.add_argument("input", help="Video URL or file path (use --video for file path)")
+    parser.add_argument(
+        "input", help="Video URL or file path (use --video for file path)"
+    )
     parser.add_argument("output", help="Output file name")
 
     args = parser.parse_args()
@@ -96,32 +111,41 @@ Examples:
     else:
         # Download from URL
         print(f"Downloading video from: {args.input}")
-        video_path = download_video(args.input, args.output, f"{config.TEMP_DIR}/{args.output}")
+        video_path = download_video(
+            args.input, args.output, f"{config.TEMP_DIR}/{args.output}"
+        )
         if not video_path:
             print("Error: Failed to download video")
-            sys.exit(1)  
+            sys.exit(1)
     path_root, ext = os.path.splitext(video_path)
 
     # Handle cropping vs no-crop
     if not args.nocrop:
         # Generate first frame for GUI and launch cropping interface
         print("Extracting first frame...")
-        first_frame = get_first_frame(video_path, args.output, f"{config.TEMP_DIR}/{args.output}")
+        first_frame = get_first_frame(
+            video_path, args.output, f"{config.TEMP_DIR}/{args.output}"
+        )
         if not first_frame:
             print("Error: Could not extract first frame")
             sys.exit(1)
 
         # Launch GUI for cropping
         print("Launching GUI for cropping...")
-        exit_code, gui = run_gui(first_frame, video_path, f"{config.TEMP_DIR}/{args.output}", keep_open=args.keep_gui)
-        
+        exit_code, gui = run_gui(
+            first_frame,
+            video_path,
+            f"{config.TEMP_DIR}/{args.output}",
+            keep_open=args.keep_gui,
+        )
+
         # Wait for crop thread to complete if it exists
         crop_thread = gui.get_crop_thread()
         if crop_thread:
             print("Waiting for crop process to complete...")
             crop_thread.join()  # Wait for the thread to finish
             print("Crop process completed!")
-        
+
         video_path = f"{path_root}_cropped{ext}"
 
         if exit_code == 0:
@@ -135,7 +159,7 @@ Examples:
         print(f"Video saved as: {args.output}{ext}")
     except FileNotFoundError:
         print(f"No video found at {video_path}, nothing to copy.")
-    
+
     # Cleanup temporary files unless --keep-temp flag is used
     if not args.keep_temp:
         print("Cleaning up temporary files...")
