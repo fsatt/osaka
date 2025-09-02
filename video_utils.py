@@ -75,7 +75,7 @@ def crop_video(video_path, output_path, x, y, width, height):
         # Generate output filename using the same extension as the input
         _, original_ext = os.path.splitext(video_path)
         # Default to .mp4 if no extension found, since we're using H.264/AAC codecs
-        ext = original_ext if original_ext else '.mp4'
+        ext = original_ext if original_ext else ".mp4"
         cropped_video_path = f"{output_path}/cropped{ext}"
 
         print(f"Saving cropped video to: {format_path(cropped_video_path)}")

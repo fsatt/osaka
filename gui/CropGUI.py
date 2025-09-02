@@ -28,7 +28,9 @@ class CropGUI(QWidget):
         main_layout = QHBoxLayout()
 
         # Image with crop box widget
-        self.image_with_cropbox = ImageWithCropBox(self.image, self, video_path=self.video_path)
+        self.image_with_cropbox = ImageWithCropBox(
+            self.image, self, video_path=self.video_path
+        )
         main_layout.addWidget(self.image_with_cropbox)
 
         # Control panel
@@ -51,23 +53,23 @@ class CropGUI(QWidget):
         return self.crop_thread
 
     def cleanup_resources(self):
-        if hasattr(self, 'image') and self.image:
+        if hasattr(self, "image") and self.image:
             try:
                 self.image.close()
                 self.image = None
             except:
                 pass
-        
+
         # Also cleanup resources in image_with_cropbox
-        if hasattr(self, 'image_with_cropbox') and self.image_with_cropbox:
-            if hasattr(self.image_with_cropbox, 'pil_image'):
+        if hasattr(self, "image_with_cropbox") and self.image_with_cropbox:
+            if hasattr(self.image_with_cropbox, "pil_image"):
                 try:
                     self.image_with_cropbox.pil_image.close()
                 except:
                     pass
-            
+
             # Cleanup any frames if it's a video
-            if hasattr(self.image_with_cropbox, 'frames'):
+            if hasattr(self.image_with_cropbox, "frames"):
                 for frame in self.image_with_cropbox.frames:
                     try:
                         frame.close()

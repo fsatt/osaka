@@ -119,7 +119,7 @@ Examples:
         # Cleanup GUI resources before deleting temporary files
         gui.cleanup_resources()
 
-        finished_vid =  f"{config.TEMP_DIR}/{args.output}/cropped{ext}"
+        finished_vid = f"{config.TEMP_DIR}/{args.output}/cropped{ext}"
 
         if exit_code == 0:
             print("GUI closed successfully")
@@ -144,7 +144,7 @@ Examples:
             # Force garbage collection to ensure all file handles are released
             gc.collect()
             time.sleep(0.1)  # Small delay to ensure resources are released
-            
+
             # Remove the entire temporary directory for this output
             temp_dir_path = f"{config.TEMP_DIR}/{args.output}"
             if os.path.exists(temp_dir_path):

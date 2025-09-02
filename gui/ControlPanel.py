@@ -176,22 +176,28 @@ class ControlPanel(QWidget):
         self.frame_label = QLabel("1/1")
         nav_layout.addWidget(self.frame_label)
         nav_layout.addStretch()
-        
+
         self.prev_button = QPushButton()
-        self.prev_button.setIcon(QIcon("assets/icons/arrow_back_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.prev_button.setIcon(
+            QIcon("assets/icons/arrow_back_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
+        )
         self.prev_button.setFixedSize(28, 28)
         self.prev_button.setToolTip("Previous Frame")
         self.prev_button.clicked.connect(self.previous_frame)
-        
+
         self.next_button = QPushButton()
-        self.next_button.setIcon(QIcon("assets/icons/arrow_forward_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"))
+        self.next_button.setIcon(
+            QIcon(
+                "assets/icons/arrow_forward_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg"
+            )
+        )
         self.next_button.setFixedSize(28, 28)
         self.next_button.setToolTip("Next Frame")
         self.next_button.clicked.connect(self.next_frame)
-        
+
         nav_layout.addWidget(self.prev_button)
         nav_layout.addWidget(self.next_button)
-        
+
         layout.addLayout(nav_layout)
 
         # Add some spacing
@@ -213,7 +219,7 @@ class ControlPanel(QWidget):
         self.image_with_cropbox = image_with_cropbox
 
         # Initialize frame controls if this is a video
-        if hasattr(image_with_cropbox, 'frames') and len(image_with_cropbox.frames) > 1:
+        if hasattr(image_with_cropbox, "frames") and len(image_with_cropbox.frames) > 1:
             self.update_frame_controls()
 
         # Check if crop box is already available
@@ -683,29 +689,29 @@ class ControlPanel(QWidget):
         return new_width, new_height
 
     def previous_frame(self):
-        if hasattr(self, 'image_with_cropbox') and self.image_with_cropbox:
+        if hasattr(self, "image_with_cropbox") and self.image_with_cropbox:
             self.image_with_cropbox.previous_frame()
             self.update_frame_controls()
 
     def next_frame(self):
-        if hasattr(self, 'image_with_cropbox') and self.image_with_cropbox:
+        if hasattr(self, "image_with_cropbox") and self.image_with_cropbox:
             self.image_with_cropbox.next_frame()
             self.update_frame_controls()
 
     def update_frame_controls(self):
         # Update frame navigation controls state
-        if not hasattr(self, 'image_with_cropbox') or not self.image_with_cropbox:
+        if not hasattr(self, "image_with_cropbox") or not self.image_with_cropbox:
             return
-            
-        if hasattr(self.image_with_cropbox, 'frames') and hasattr(self, 'frame_label'):
-            current_frame = getattr(self.image_with_cropbox, 'current_frame_index', 0)
+
+        if hasattr(self.image_with_cropbox, "frames") and hasattr(self, "frame_label"):
+            current_frame = getattr(self.image_with_cropbox, "current_frame_index", 0)
             total_frames = len(self.image_with_cropbox.frames)
-            
+
             # Update frame label
             self.frame_label.setText(f"{current_frame + 1}/{total_frames}")
-            
+
             # Update button states
-            if hasattr(self, 'prev_button'):
+            if hasattr(self, "prev_button"):
                 self.prev_button.setEnabled(current_frame > 0)
-            if hasattr(self, 'next_button'):
+            if hasattr(self, "next_button"):
                 self.next_button.setEnabled(current_frame < total_frames - 1)
