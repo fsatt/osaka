@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import QWidget
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen
 from PyQt6.QtCore import Qt, QRect, pyqtSignal
 
+from config_loader import config
+
 
 class ResizableCropBox(QWidget):
     # Signal to emit when crop rectangle changes
@@ -17,8 +19,8 @@ class ResizableCropBox(QWidget):
         # Store previous size for proportional scaling
         self.previous_size = self.size()
         self.handle_size = 10
-        self.min_height = 20
-        self.min_width = 20
+        self.min_height = config.MIN_CROP_HEIGHT
+        self.min_width = config.MIN_CROP_WIDTH
         self.aspect_ratio = None
         self.drag_handle = None
         self.drag_start = None

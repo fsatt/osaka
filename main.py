@@ -7,12 +7,13 @@ import yt_dlp
 from moviepy import VideoFileClip
 from PIL import Image
 
+from config_loader import config
 from gui import run_gui
 
 
-def download_video(url, name, output_path="temp"):
+def download_video(url, output_path):
     ydl_opts = {
-        "outtmpl": f"{output_path}/{name}_raw.%(ext)s",
+        "outtmpl": f"{output_path}/raw.%(ext)s",
         "format": "bestvideo+bestaudio/best",
         "noplaylist": True,
     }
@@ -20,15 +21,15 @@ def download_video(url, name, output_path="temp"):
         info = ydl.extract_info(url, download=True)
         ext = info.get("ext")
 
-        return f"{output_path}/{name}_raw.{ext}"
+        return f"{output_path}/raw.{ext}"
 
 
-def get_first_frame(video_path, name, output_path="temp"):
+def get_first_frame(video_path, output_path):
     try:
         clip = VideoFileClip(video_path)
         frame_array = clip.get_frame(0)
         image = Image.fromarray(frame_array)
-        frame_path = f"{output_path}/{name}_first_frame.jpg"
+        frame_path = f"{output_path}/first_frame.jpg"
         image.save(frame_path)
         clip.close()
         return frame_path
@@ -81,9 +82,8 @@ Examples:
     args = parser.parse_args()
 
     # Create temp directory if it doesn't exist
-    os.makedirs("temp", exist_ok=True)
-    temp_dir = args.output.replace(".", "_")
-    os.makedirs(f"temp/{temp_dir}", exist_ok=True)
+    os.makedirs(config.TEMP_DIR, exist_ok=True)
+    os.makedirs(f"{config.TEMP_DIR}/{args.output}", exist_ok=True)
 
     # Handle input
     if args.video:
@@ -96,7 +96,7 @@ Examples:
     else:
         # Download from URL
         print(f"Downloading video from: {args.input}")
-        video_path = download_video(args.input, args.output, f"temp/{temp_dir}")
+        video_path = download_video(args.input, args.output, f"{config.TEMP_DIR}/{args.output}")
         if not video_path:
             print("Error: Failed to download video")
             sys.exit(1)  
@@ -106,14 +106,14 @@ Examples:
     if not args.nocrop:
         # Generate first frame for GUI and launch cropping interface
         print("Extracting first frame...")
-        first_frame = get_first_frame(video_path, args.output, f"temp/{temp_dir}")
+        first_frame = get_first_frame(video_path, args.output, f"{config.TEMP_DIR}/{args.output}")
         if not first_frame:
             print("Error: Could not extract first frame")
             sys.exit(1)
 
         # Launch GUI for cropping
         print("Launching GUI for cropping...")
-        exit_code, gui = run_gui(first_frame, video_path, f"temp/{temp_dir}", keep_open=args.keep_gui)
+        exit_code, gui = run_gui(first_frame, video_path, f"{config.TEMP_DIR}/{args.output}", keep_open=args.keep_gui)
         
         # Wait for crop thread to complete if it exists
         crop_thread = gui.get_crop_thread()
@@ -129,16 +129,19 @@ Examples:
         else:
             print(f"GUI closed with error code: {exit_code}")
 
-    print(f"Copying video to: {args.output}{ext}")
-    shutil.copy2(video_path, f"temp/hi/{args.output}{ext}") # TODO: set destination directory
-    print(f"Video saved as: {args.output}{ext}")
+    try:
+        print(f"Copying video to: {args.output}{ext}")
+        shutil.copy2(video_path, f"{config.OUTPUT_DIR}/{args.output}{ext}")
+        print(f"Video saved as: {args.output}{ext}")
+    except FileNotFoundError:
+        print(f"No video found at {video_path}, nothing to copy.")
     
     # Cleanup temporary files unless --keep-temp flag is used
     if not args.keep_temp:
         print("Cleaning up temporary files...")
         try:
             # Remove the entire temporary directory for this output
-            temp_dir_path = f"temp/{temp_dir}"
+            temp_dir_path = f"{config.TEMP_DIR}/{args.output}"
             if os.path.exists(temp_dir_path):
                 shutil.rmtree(temp_dir_path)
                 print(f"Removed temporary directory: {temp_dir_path}")

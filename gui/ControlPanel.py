@@ -14,6 +14,8 @@ from PyQt6.QtGui import QIcon
 from moviepy import VideoFileClip
 from moviepy.video.fx.Crop import Crop
 
+from config_loader import config
+
 
 class ControlPanel(QWidget):
     def __init__(self, video_path=None, output_path="temp"):
@@ -415,34 +417,34 @@ class ControlPanel(QWidget):
             self.image_with_cropbox, "pil_image"
         ):
             return x, y, width, height
-        minimum_width, minimum_height = 20, 20
+        min_width, min_height = config.MIN_CROP_WIDTH, config.MIN_CROP_HEIGHT
 
         image_width = self.image_with_cropbox.pil_image.width
         image_height = self.image_with_cropbox.pil_image.height
 
         # Ensure minimum dimensions
-        width = max(minimum_width, width)
-        height = max(minimum_height, height)
+        width = max(min_width, width)
+        height = max(min_height, height)
 
         # Adjust width if x + width exceeds image bounds
         if x + width > image_width:
             width = image_width - x
-            width = max(minimum_width, width)  # Ensure minimum width
+            width = max(min_width, width)  # Ensure minimum width
 
         # Adjust height if y + height exceeds image bounds
         if y + height > image_height:
             height = image_height - y
-            height = max(minimum_height, height)  # Ensure minimum height
+            height = max(min_height, height)  # Ensure minimum height
 
         # If width is still too small, adjust x
-        if width < minimum_width:
-            x = max(0, image_width - minimum_width)
-            width = minimum_width
+        if width < min_width:
+            x = max(0, image_width - min_width)
+            width = min_width
 
         # If height is still too small, adjust y
-        if height < minimum_height:
-            y = max(0, image_height - minimum_height)
-            height = minimum_height
+        if height < min_height:
+            y = max(0, image_height - min_height)
+            height = min_height
 
         # Final bounds check
         x = max(0, min(x, image_width - width))
