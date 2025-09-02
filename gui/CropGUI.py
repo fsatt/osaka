@@ -9,12 +9,14 @@ from gui.ControlPanel import ControlPanel
 
 
 class CropGUI(QWidget):
-    def __init__(self, image_path, video_path=None, output_path="temp"):
+    def __init__(self, image_path, video_path, output_path, auto_close):
         super().__init__()
         self.image_path = image_path
         self.video_path = video_path
         self.output_path = output_path
         self.image = Image.open(self.image_path)
+        self.auto_close = auto_close
+        self.crop_thread = None  # Store crop thread reference
         self.initUI()
 
     def initUI(self):
@@ -41,3 +43,9 @@ class CropGUI(QWidget):
 
     def connect_crop_signals(self, crop_box):
         self.control_panel.connect_crop_signals(crop_box, self.image_with_cropbox)
+
+    def set_crop_thread(self, thread):
+        self.crop_thread = thread
+    
+    def get_crop_thread(self):
+        return self.crop_thread

@@ -45,13 +45,16 @@ def main():
         epilog="""
 Examples:
   # Download from URL and crop with GUI (default)
-  osaka "https://www.instagram.com/p/example/" "my_video.mp4"
+  osaka "https://www.instagram.com/p/example/" "my_video"
   
   # Use local video file and crop with GUI  
-  osaka --video "path/to/video.mp4" "output.mp4"
+  osaka --video "path/to/video.mp4" "output"
   
   # Download only, skip cropping
-  osaka --nocrop "https://www.instagram.com/p/example/" "my_video.mp4"
+  osaka --nocrop "https://www.instagram.com/p/example/" "my_video"
+  
+  # Keep GUI open after cropping and keep temporary files
+  osaka --keep-gui --keep-temp "url" "output"
         """
     )
 
@@ -63,6 +66,14 @@ Examples:
     parser.add_argument("--nocrop", "-n", action="store_true",
                        help="Skip cropping, just download the video")
 
+    # Keep GUI open after cropping
+    parser.add_argument("--keep-gui", "-k", action="store_true",
+                       help="Keep GUI open after crop button is clicked")
+    
+    # Keep temporary files
+    parser.add_argument("--keep-temp", "-t", action="store_true",
+                       help="Keep temporary files (don't cleanup at end)")
+
     # Positional arguments
     parser.add_argument("input", help="Video URL or file path (use --video for file path)")
     parser.add_argument("output", help="Output file name")
@@ -71,6 +82,8 @@ Examples:
 
     # Create temp directory if it doesn't exist
     os.makedirs("temp", exist_ok=True)
+    temp_dir = args.output.replace(".", "_")
+    os.makedirs(f"temp/{temp_dir}", exist_ok=True)
 
     # Handle input
     if args.video:
@@ -83,7 +96,7 @@ Examples:
     else:
         # Download from URL
         print(f"Downloading video from: {args.input}")
-        video_path = download_video(args.input, args.output)
+        video_path = download_video(args.input, args.output, f"temp/{temp_dir}")
         if not video_path:
             print("Error: Failed to download video")
             sys.exit(1)  
@@ -93,14 +106,22 @@ Examples:
     if not args.nocrop:
         # Generate first frame for GUI and launch cropping interface
         print("Extracting first frame...")
-        first_frame = get_first_frame(video_path, args.output)
+        first_frame = get_first_frame(video_path, args.output, f"temp/{temp_dir}")
         if not first_frame:
             print("Error: Could not extract first frame")
             sys.exit(1)
 
         # Launch GUI for cropping
         print("Launching GUI for cropping...")
-        exit_code = run_gui(first_frame, video_path)
+        exit_code, gui = run_gui(first_frame, video_path, f"temp/{temp_dir}", keep_open=args.keep_gui)
+        
+        # Wait for crop thread to complete if it exists
+        crop_thread = gui.get_crop_thread()
+        if crop_thread:
+            print("Waiting for crop process to complete...")
+            crop_thread.join()  # Wait for the thread to finish
+            print("Crop process completed!")
+        
         video_path = f"{path_root}_cropped{ext}"
 
         if exit_code == 0:
@@ -111,6 +132,20 @@ Examples:
     print(f"Copying video to: {args.output}{ext}")
     shutil.copy2(video_path, f"temp/hi/{args.output}{ext}") # TODO: set destination directory
     print(f"Video saved as: {args.output}{ext}")
+    
+    # Cleanup temporary files unless --keep-temp flag is used
+    if not args.keep_temp:
+        print("Cleaning up temporary files...")
+        try:
+            # Remove the entire temporary directory for this output
+            temp_dir_path = f"temp/{temp_dir}"
+            if os.path.exists(temp_dir_path):
+                shutil.rmtree(temp_dir_path)
+                print(f"Removed temporary directory: {temp_dir_path}")
+        except Exception as e:
+            print(f"Warning: Could not cleanup some temporary files: {e}")
+    else:
+        print("Temporary files kept as requested")
 
 
 if __name__ == "__main__":

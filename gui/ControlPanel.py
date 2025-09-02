@@ -1,4 +1,5 @@
 import os
+import threading
 
 from PyQt6.QtWidgets import (
     QWidget,
@@ -176,7 +177,7 @@ class ControlPanel(QWidget):
         self.crop_button.setIcon(
             QIcon("assets/icons/crop_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
         )
-        self.crop_button.clicked.connect(self.start_crop_process)
+        self.crop_button.clicked.connect(self.start_crop_background)
         layout.addWidget(self.crop_button)
 
         # Set max width for the panel
@@ -518,6 +519,19 @@ class ControlPanel(QWidget):
             print("Please enter valid integer values for cropping coordinates.")
         except Exception as e:
             print(f"Error during video cropping: {e}")
+
+    def start_crop_background(self):
+        # Start the crop process in a separate thread (not daemon so main can wait)
+        crop_thread = threading.Thread(target=self.start_crop_process)
+        crop_thread.start()
+        
+        # Store the thread reference in the parent GUI
+        if self.parent() and hasattr(self.parent(), 'set_crop_thread'):
+            self.parent().set_crop_thread(crop_thread)
+        
+        # Only close the window if auto_close is True (--keep-gui flag not set)
+        if self.parent() and hasattr(self.parent(), 'auto_close') and self.parent().auto_close:
+            self.parent().close()
 
     def align_horizontal(self):
         if not self.crop_box or not self.image_with_cropbox:
