@@ -1,7 +1,9 @@
 import argparse
+import gc
+import os
 import shutil
 import sys
-import os
+import time
 
 from config_loader import config, runtime_config
 from gui import run_gui
@@ -114,7 +116,10 @@ Examples:
             crop_thread.join()  # Wait for the thread to finish
             print("Crop process completed!")
 
-        video_path = f"{path_root}_cropped{ext}"
+        # Cleanup GUI resources before deleting temporary files
+        gui.cleanup_resources()
+
+        finished_vid =  f"{config.TEMP_DIR}/{args.output}/cropped{ext}"
 
         if exit_code == 0:
             print("GUI closed successfully")
@@ -125,17 +130,21 @@ Examples:
         print(
             f"Copying video to: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
         )
-        shutil.copy2(video_path, f"{config.OUTPUT_DIR}/{args.output}{ext}")
+        shutil.copy2(finished_vid, f"{config.OUTPUT_DIR}/{args.output}{ext}")
         print(
             f"Video saved as: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
         )
     except FileNotFoundError:
-        print(f"No video found at {format_path(video_path)}, nothing to copy.")
+        print(f"No video found at {format_path(finished_vid)}, nothing to copy.")
 
     # Cleanup temporary files unless --keep-temp flag is used
     if not args.keep_temp:
         print("Cleaning up temporary files...")
         try:
+            # Force garbage collection to ensure all file handles are released
+            gc.collect()
+            time.sleep(0.1)  # Small delay to ensure resources are released
+            
             # Remove the entire temporary directory for this output
             temp_dir_path = f"{config.TEMP_DIR}/{args.output}"
             if os.path.exists(temp_dir_path):
