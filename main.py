@@ -10,29 +10,30 @@ from gui import run_gui
 from video_utils import download_video, get_first_frame, format_path
 
 
+def is_url(input_string):
+    # Simple URL detection - check for common URL schemes
+    url_schemes = ["http://", "https://", "ftp://", "ftps://"]
+    return any(input_string.startswith(scheme) for scheme in url_schemes)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Osaka - Video Cropping Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Download from URL and crop with GUI (default)
+  # Download from URL and crop with GUI
   osaka "https://www.instagram.com/p/example/" "my_video"
   
   # Use local video file and crop with GUI  
-  osaka --video "path/to/video.mp4" "output"
+  osaka "path/to/video.mp4" "output"
   
   # Download only, skip cropping
   osaka --nocrop "https://www.instagram.com/p/example/" "my_video"
   
   # Keep GUI open after cropping and keep temporary files
-  osaka --keep-gui --keep-temp "url" "output"
+  osaka --keep-gui --keep-temp "input" "output"
         """,
-    )
-
-    # Video source option
-    parser.add_argument(
-        "--video", "-v", action="store_true", help="Use local video file instead of URL"
     )
 
     # No crop flag - skip GUI and just download/copy
@@ -60,9 +61,7 @@ Examples:
     )
 
     # Positional arguments
-    parser.add_argument(
-        "input", help="Video URL or file path (use --video for file path)"
-    )
+    parser.add_argument("input", help="Video URL or local file path (auto-detected)")
     parser.add_argument("output", help="Output file name")
 
     args = parser.parse_args()
@@ -74,21 +73,21 @@ Examples:
     os.makedirs(config.TEMP_DIR, exist_ok=True)
     os.makedirs(f"{config.TEMP_DIR}/{args.output}", exist_ok=True)
 
-    # Handle input
-    if args.video:
-        # Local video file
-        video_path = args.input
-        if not os.path.exists(video_path):
-            print(f"Error: Video file {format_path(video_path)} not found")
-            sys.exit(1)
-        print(f"Using local video: {format_path(video_path)}")
-    else:
+    # Handle input - auto-detect URL vs file path
+    if is_url(args.input):
         # Download from URL
         print(f"Downloading video from: {args.input}")
         video_path = download_video(args.input, f"{config.TEMP_DIR}/{args.output}")
         if not video_path:
             print("Error: Failed to download video")
             sys.exit(1)
+    else:
+        # Local video file
+        video_path = args.input
+        if not os.path.exists(video_path):
+            print(f"Error: Video file {format_path(video_path)} not found")
+            sys.exit(1)
+        print(f"Using local video: {format_path(video_path)}")
     path_root, ext = os.path.splitext(video_path)
 
     # Handle cropping vs no-crop
