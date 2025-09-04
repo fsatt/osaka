@@ -7,29 +7,23 @@ import time
 
 from config_loader import config, runtime_config
 from gui import run_gui
-from video_utils import download_video, get_first_frame, format_path
-
-
-def is_url(input_string):
-    # Simple URL detection - check for common URL schemes
-    url_schemes = ["http://", "https://", "ftp://", "ftps://"]
-    return any(input_string.startswith(scheme) for scheme in url_schemes)
+from utils import download_media, format_path, is_url, get_media_type, MediaType
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Osaka - Video Cropping Tool",
+        description="Osaka - Media Download and Editing Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
   # Download from URL and crop with GUI
-  osaka "https://www.instagram.com/p/example/" "my_video"
+  osaka "https://www.instagram.com/p/example/" "my_media"
   
-  # Use local video file and crop with GUI  
-  osaka "path/to/video.mp4" "output"
+  # Use local media file and crop with GUI  
+  osaka "path/to/media.mp4" "output"
   
   # Download only, skip cropping
-  osaka --nocrop "https://www.instagram.com/p/example/" "my_video"
+  osaka --no-edit "https://www.instagram.com/p/example/" "my_media"
   
   # Keep GUI open after cropping and keep temporary files
   osaka --keep-gui --keep-temp "input" "output"
@@ -38,10 +32,10 @@ Examples:
 
     # No crop flag - skip GUI and just download/copy
     parser.add_argument(
-        "--nocrop",
+        "--no-edit",
         "-n",
         action="store_true",
-        help="Skip cropping, just download the video",
+        help="Skip cropping, just download the media",
     )
 
     # Keep GUI open after cropping
@@ -61,7 +55,7 @@ Examples:
     )
 
     # Positional arguments
-    parser.add_argument("input", help="Video URL or local file path (auto-detected)")
+    parser.add_argument("input", help="Media URL or local file path (auto-detected)")
     parser.add_argument("output", help="Output file name")
 
     args = parser.parse_args()
@@ -76,35 +70,39 @@ Examples:
     # Handle input - auto-detect URL vs file path
     if is_url(args.input):
         # Download from URL
-        print(f"Downloading video from: {args.input}")
-        video_path = download_video(args.input, f"{config.TEMP_DIR}/{args.output}")
-        if not video_path:
-            print("Error: Failed to download video")
+        print(f"Downloading media from: {args.input}")
+        media_path = download_media(args.input, f"{config.TEMP_DIR}/{args.output}")
+        if not media_path:
+            print("Error: Failed to download media")
             sys.exit(1)
     else:
-        # Local video file
-        video_path = args.input
-        if not os.path.exists(video_path):
-            print(f"Error: Video file {format_path(video_path)} not found")
+        # Local media file
+        media_path = args.input
+        if not os.path.exists(media_path):
+            print(f"Error: File {format_path(media_path)} not found")
             sys.exit(1)
-        print(f"Using local video: {format_path(video_path)}")
-    path_root, ext = os.path.splitext(video_path)
+        print(f"Using local file: {format_path(media_path)}")
+    
+    path_root, ext = os.path.splitext(media_path)
+    
+    # Handle unsupported media types
+    media_type = get_media_type(ext)
+    if media_type == MediaType.UNKNOWN:
+        print(f"Error: Unsupported media type: {ext}")
+        sys.exit(1)
+    if media_type == MediaType.AUDIO:
+        print("No support for Audio files yet :)")
+        sys.exit(1)
+    print(f"Detected media type: {media_type.value}")
 
-    # Handle cropping vs no-crop
-    if not args.nocrop:
-        # Generate first frame for GUI and launch cropping interface
-        print("Extracting first frame...")
-        first_frame = get_first_frame(video_path, f"{config.TEMP_DIR}/{args.output}")
-        if not first_frame:
-            print("Error: Could not extract first frame")
-            sys.exit(1)
-
-        # Launch GUI for cropping
-        print("Launching GUI for cropping...")
+    # Handle edit vs no-edit
+    if not args.no_edit:
+        # Launch GUI for editing
+        print("Launching GUI for editing...")
         exit_code, gui = run_gui(
-            first_frame,
-            video_path,
-            f"{config.TEMP_DIR}/{args.output}",
+            media_path=media_path,
+            media_type=media_type,
+            output_path=f"{config.TEMP_DIR}/{args.output}",
             keep_open=args.keep_gui,
         )
 
@@ -118,7 +116,7 @@ Examples:
         # Cleanup GUI resources before deleting temporary files
         gui.cleanup_resources()
 
-        finished_vid = f"{config.TEMP_DIR}/{args.output}/cropped{ext}"
+        result = f"{config.TEMP_DIR}/{args.output}/cropped{ext}"
 
         if exit_code == 0:
             print("GUI closed successfully")
@@ -127,14 +125,14 @@ Examples:
 
     try:
         print(
-            f"Copying video to: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
+            f"Copying {media_type.value.lower()} to: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
         )
-        shutil.copy2(finished_vid, f"{config.OUTPUT_DIR}/{args.output}{ext}")
+        shutil.copy2(result, f"{config.OUTPUT_DIR}/{args.output}{ext}")
         print(
-            f"Video saved as: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
+            f"{media_type.value.capitalize()} saved as: {format_path(f'{config.OUTPUT_DIR}/{args.output}{ext}')}"
         )
     except FileNotFoundError:
-        print(f"No video found at {format_path(finished_vid)}, nothing to copy.")
+        print(f"No {media_type.value.lower()} found at {format_path(result)}, nothing to copy.")
 
     # Cleanup temporary files unless --keep-temp flag is used
     if not args.keep_temp:

@@ -6,15 +6,20 @@ from PIL import Image
 
 from gui.ImageWithCropBox import ImageWithCropBox
 from gui.ControlPanel import ControlPanel
+from utils import MediaType
 
 
 class CropGUI(QWidget):
-    def __init__(self, image_path, video_path, output_path, auto_close):
+    def __init__(self, media_path, media_type, output_path, auto_close):
         super().__init__()
-        self.image_path = image_path
-        self.video_path = video_path
+        
+        self.image_path = media_path if media_type == MediaType.IMAGE else None
+        self.video_path = media_path if media_type == MediaType.VIDEO else None
+        
+        self.media_path = media_path
+        self.media_type = media_type
         self.output_path = output_path
-        self.image = Image.open(self.image_path)
+        self.image = Image.open(self.image_path) if self.image_path else None
         self.auto_close = auto_close
         self.crop_thread = None  # Store crop thread reference
         self.initUI()
@@ -35,7 +40,9 @@ class CropGUI(QWidget):
 
         # Control panel
         self.control_panel = ControlPanel(
-            video_path=self.video_path, output_path=self.output_path
+            media_path=self.media_path, 
+            media_type=self.media_type, 
+            output_path=self.output_path
         )
         # Connect the control panel to the image widget
         self.control_panel.set_image_widget(self.image_with_cropbox)

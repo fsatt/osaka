@@ -30,6 +30,7 @@ dependencies = [
     "Pillow",
     "yt-dlp",
     "moviepy",
+    "gallery-dl",
 ]
 
 [project.scripts]

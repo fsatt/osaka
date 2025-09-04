@@ -13,13 +13,15 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon
 
 from config_loader import config
-from video_utils import crop_video
+from utils import crop_video, crop_image, MediaType
 
 
 class ControlPanel(QWidget):
-    def __init__(self, video_path=None, output_path="temp"):
+    def __init__(self, media_path, media_type, output_path):
         super().__init__()
-        self.video_path = video_path
+        self.media_path = media_path
+        self.media_type = media_type
+        self.video_path = media_path if media_type == MediaType.VIDEO else None
         self.output_path = output_path
         self.crop_box = None
         self.image_with_cropbox = None
@@ -170,10 +172,37 @@ class ControlPanel(QWidget):
         aspect_layout.addWidget(self.aspect_ratio_combo)
         layout.addLayout(aspect_layout)
 
-        # Frame navigation controls
+        # Frame navigation controls for videos
+        if self.media_type == MediaType.VIDEO:
+            self.add_frame_navigation(layout)
+
+        # Add some spacing
+        layout.addStretch()
+
+        # Cropping button - text depends on media type
+        if self.media_type == MediaType.IMAGE:
+            button_text = " Crop Image"
+        elif self.media_type == MediaType.VIDEO:
+            button_text = " Crop Video"
+        else:
+            button_text = " Crop Media"
+            
+        self.crop_button = QPushButton(button_text)
+        self.crop_button.setIcon(
+            QIcon("assets/icons/crop_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
+        )
+        self.crop_button.clicked.connect(self.start_crop_background)
+        layout.addWidget(self.crop_button)
+
+        # Set max width for the panel
+        self.setMaximumWidth(130)
+        self.setLayout(layout)
+
+    def add_frame_navigation(self, layout):
         nav_layout = QHBoxLayout()
 
         self.frame_label = QLabel("1/1")
+        self.frame_label.setToolTip("Current Frame")
         nav_layout.addWidget(self.frame_label)
         nav_layout.addStretch()
 
@@ -199,21 +228,6 @@ class ControlPanel(QWidget):
         nav_layout.addWidget(self.next_button)
 
         layout.addLayout(nav_layout)
-
-        # Add some spacing
-        layout.addStretch()
-
-        # Cropping button
-        self.crop_button = QPushButton(" Crop Video")
-        self.crop_button.setIcon(
-            QIcon("assets/icons/crop_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg")
-        )
-        self.crop_button.clicked.connect(self.start_crop_background)
-        layout.addWidget(self.crop_button)
-
-        # Set max width for the panel
-        self.setMaximumWidth(130)
-        self.setLayout(layout)
 
     def set_image_widget(self, image_with_cropbox):
         self.image_with_cropbox = image_with_cropbox
@@ -507,12 +521,18 @@ class ControlPanel(QWidget):
             y = self.y_input.value()
             width = self.width_input.value()
             height = self.height_input.value()
-            video_path = self.video_path
+            media_path = self.media_path
+            media_type = self.media_type
             output_path = self.output_path
 
-            # Define a function that captures the data
+            # Define a function that captures the data and calls appropriate crop function
             def crop_func():
-                crop_video(video_path, output_path, x, y, width, height)
+                if media_type == MediaType.IMAGE:
+                    crop_image(media_path, output_path, x, y, width, height)
+                elif media_type == MediaType.VIDEO:
+                    crop_video(media_path, output_path, x, y, width, height)
+                else:
+                    print(f"Unsupported media type: {media_type}")
 
             # Start the crop process in a separate thread
             crop_thread = threading.Thread(target=crop_func)
